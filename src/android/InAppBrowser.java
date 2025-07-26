@@ -926,7 +926,7 @@ public class InAppBrowser extends CordovaPlugin {
     TextView footerText = new TextView(cordova.getActivity());
     footerText.setText(footerTitle);
     footerText.setTextColor(Color.BLACK); // یا مثلاً سفید، بسته به رنگ footer
-    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
     footerText.setGravity(Gravity.CENTER);
 
     RelativeLayout.LayoutParams textLayout = new RelativeLayout.LayoutParams(
