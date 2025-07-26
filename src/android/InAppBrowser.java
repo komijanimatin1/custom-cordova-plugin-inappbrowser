@@ -147,6 +147,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean hideUrlBar = false;
     private boolean showFooter = false;
     private String footerColor = "";
+    private String footerTitle = "";
     private String beforeload = "";
     private boolean fullscreen = true;
     private String[] allowedSchemes;
@@ -708,6 +709,10 @@ public class InAppBrowser extends CordovaPlugin {
             if (footerColorSet != null) {
                 footerColor = footerColorSet;
             }
+              String footerTitleSet = features.get("footertitle");
+              if (footerTitleSet != null) {
+                footerTitle = footerTitleSet;
+               }
             if (features.get(BEFORELOAD) != null) {
                 beforeload = features.get(BEFORELOAD);
             }
@@ -915,6 +920,23 @@ public class InAppBrowser extends CordovaPlugin {
 
                 View footerClose = createCloseButton(7);
                 footer.addView(footerClose);
+
+                   if (!footerTitle.isEmpty()) {
+    TextView footerText = new TextView(cordova.getActivity());
+    footerText.setText(footerTitle);
+    footerText.setTextColor(Color.BLACK); // یا مثلاً سفید، بسته به رنگ footer
+    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+    footerText.setGravity(Gravity.CENTER);
+
+    RelativeLayout.LayoutParams textLayout = new RelativeLayout.LayoutParams(
+        LayoutParams.MATCH_PARENT,
+        LayoutParams.WRAP_CONTENT
+    );
+    textLayout.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+    footerText.setLayoutParams(textLayout);
+
+    footer.addView(footerText);
+}
 
                 // WebView
                 inAppWebView = new WebView(cordova.getActivity());
