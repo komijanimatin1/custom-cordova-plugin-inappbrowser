@@ -973,21 +973,14 @@ if (showInjectButton) {
     injectButton.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            // Use the JavaScript code passed from the app
-            if (!injectJsCode.isEmpty()) {
-                inAppWebView.evaluateJavascript(injectJsCode, new ValueCallback<String>() {
-                    @Override
-                    public void onReceiveValue(String value) {
-                        try {
-                            JSONObject obj = new JSONObject();
-                            obj.put("type", "inject");
-                            obj.put("data", value);
-                            sendUpdate(obj, true);
-                        } catch (JSONException ex) {
-                            LOG.e(LOG_TAG, "Error sending inject result: " + ex.toString());
-                        }
-                    }
-                });
+            // Send a simple inject event to trigger the JavaScript execution
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("type", "inject");
+                obj.put("data", "button_clicked");
+                sendUpdate(obj, true);
+            } catch (JSONException ex) {
+                LOG.e(LOG_TAG, "Error sending inject event: " + ex.toString());
             }
         }
     });
