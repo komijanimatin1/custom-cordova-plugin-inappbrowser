@@ -964,9 +964,10 @@ if (showInjectButton) {
         LayoutParams.WRAP_CONTENT,
         LayoutParams.WRAP_CONTENT
     );
-    buttonLayout.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+    buttonLayout.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
     buttonLayout.setMargins(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
     injectButton.setLayoutParams(buttonLayout);
+       
 
     // Add click listener to inject JavaScript
     injectButton.setOnClickListener(new View.OnClickListener() {
