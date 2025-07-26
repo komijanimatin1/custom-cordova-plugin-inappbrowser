@@ -928,65 +928,82 @@ public class InAppBrowser extends CordovaPlugin {
                 RelativeLayout.LayoutParams footerLayout = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
                 footerLayout.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
                 footer.setLayoutParams(footerLayout);
-                if (closeButtonCaption != "") footer.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
-                footer.setHorizontalGravity(Gravity.LEFT);
-                footer.setVerticalGravity(Gravity.BOTTOM);
+                footer.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
 
+                // Create horizontal layout for footer content (like flex-direction: row)
+                LinearLayout footerContent = new LinearLayout(cordova.getActivity());
+                footerContent.setOrientation(LinearLayout.HORIZONTAL);
+                footerContent.setGravity(Gravity.CENTER_VERTICAL);
+                footerContent.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+                // Add inject button if enabled
+                if (showInjectButton) {
+                    Button injectButton = new Button(cordova.getActivity());
+                    injectButton.setText("Inject JS");
+                    injectButton.setTextColor(Color.WHITE);
+                    injectButton.setBackgroundColor(Color.TRANSPARENT);
+                    injectButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    injectButton.setAllCaps(false);
+
+                    LinearLayout.LayoutParams buttonLayout = new LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    buttonLayout.weight = 1; // Like flex: 1
+                    buttonLayout.gravity = Gravity.CENTER;
+                    injectButton.setLayoutParams(buttonLayout);
+
+                    // Add click listener to inject JavaScript
+                    injectButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Send a simple inject event to trigger the JavaScript execution
+                            try {
+                                JSONObject obj = new JSONObject();
+                                obj.put("type", "inject");
+                                obj.put("data", "button_clicked");
+                                sendUpdate(obj, true);
+                            } catch (JSONException ex) {
+                                LOG.e(LOG_TAG, "Error sending inject event: " + ex.toString());
+                            }
+                        }
+                    });
+
+                    footerContent.addView(injectButton);
+                }
+
+                // Add title in center
+                if (!footerTitle.isEmpty()) {
+                    TextView footerText = new TextView(cordova.getActivity());
+                    footerText.setText(footerTitle);
+                    footerText.setTextColor(Color.BLACK);
+                    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+                    footerText.setGravity(Gravity.CENTER);
+
+                    LinearLayout.LayoutParams textLayout = new LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    textLayout.weight = 2; // Give more space to title (like flex: 2)
+                    textLayout.gravity = Gravity.CENTER;
+                    footerText.setLayoutParams(textLayout);
+
+                    footerContent.addView(footerText);
+                }
+
+                // Add close button
                 View footerClose = createCloseButton(7);
-                footer.addView(footerClose);
+                LinearLayout.LayoutParams closeButtonLayout = new LinearLayout.LayoutParams(
+                    LayoutParams.WRAP_CONTENT,
+                    LayoutParams.WRAP_CONTENT
+                );
+                closeButtonLayout.weight = 1; // Like flex: 1
+                closeButtonLayout.gravity = Gravity.CENTER;
+                footerClose.setLayoutParams(closeButtonLayout);
+                footerContent.addView(footerClose);
 
-                   if (!footerTitle.isEmpty()) {
-    TextView footerText = new TextView(cordova.getActivity());
-    footerText.setText(footerTitle);
-    footerText.setTextColor(Color.BLACK); // یا مثلاً سفید، بسته به رنگ footer
-    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
-    footerText.setGravity(Gravity.CENTER);
-
-    RelativeLayout.LayoutParams textLayout = new RelativeLayout.LayoutParams(
-        LayoutParams.MATCH_PARENT,
-        LayoutParams.WRAP_CONTENT
-    );
-    textLayout.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
-    footerText.setLayoutParams(textLayout);
-
-    footer.addView(footerText);
-}
-                   // Add inject button if enabled
-if (showInjectButton) {
-    Button injectButton = new Button(cordova.getActivity());
-    injectButton.setText("Inject JS");
-    injectButton.setTextColor(Color.WHITE);
-    injectButton.setBackgroundColor(Color.TRANSPARENT);
-    injectButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-    injectButton.setAllCaps(false);
-
-    RelativeLayout.LayoutParams buttonLayout = new RelativeLayout.LayoutParams(
-        LayoutParams.WRAP_CONTENT,
-        LayoutParams.WRAP_CONTENT
-    );
-    buttonLayout.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-    buttonLayout.setMargins(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
-    injectButton.setLayoutParams(buttonLayout);
-       
-
-    // Add click listener to inject JavaScript
-    injectButton.setOnClickListener(new View.OnClickListener() {
-        @Override
-        public void onClick(View v) {
-            // Send a simple inject event to trigger the JavaScript execution
-            try {
-                JSONObject obj = new JSONObject();
-                obj.put("type", "inject");
-                obj.put("data", "button_clicked");
-                sendUpdate(obj, true);
-            } catch (JSONException ex) {
-                LOG.e(LOG_TAG, "Error sending inject event: " + ex.toString());
-            }
-        }
-    });
-
-    footer.addView(injectButton);
-}
+                // Add the horizontal content to footer
+                footer.addView(footerContent);
 
 
                 // WebView
