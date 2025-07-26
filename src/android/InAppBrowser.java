@@ -119,6 +119,8 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FOOTER_TITLE = "footertitle";
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
+       private static final String INJECT_BUTTON = "injectbutton";
+    private static final String INJECT_JS_CODE = "injectjscode";
 
     private static final int TOOLBAR_HEIGHT = 120;
 
@@ -151,6 +153,8 @@ public class InAppBrowser extends CordovaPlugin {
     private String footerTitle = "";
     private String beforeload = "";
     private boolean fullscreen = true;
+       private boolean showInjectButton = false;
+    private String injectJsCode = "";
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
 
@@ -721,6 +725,14 @@ public class InAppBrowser extends CordovaPlugin {
             if (fullscreenSet != null) {
                 fullscreen = fullscreenSet.equals("yes") ? true : false;
             }
+               String injectButtonSet = features.get(INJECT_BUTTON);
+            if (injectButtonSet != null) {
+                showInjectButton = injectButtonSet.equals("yes") ? true : false;
+            }
+            String injectJsCodeSet = features.get(INJECT_JS_CODE);
+            if (injectJsCodeSet != null) {
+                injectJsCode = injectJsCodeSet;
+            }
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -938,6 +950,49 @@ public class InAppBrowser extends CordovaPlugin {
 
     footer.addView(footerText);
 }
+                   // Add inject button if enabled
+if (showInjectButton) {
+    Button injectButton = new Button(cordova.getActivity());
+    injectButton.setText("Inject JS");
+    injectButton.setTextColor(Color.WHITE);
+    injectButton.setBackgroundColor(Color.TRANSPARENT);
+    injectButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+    injectButton.setAllCaps(false);
+
+    RelativeLayout.LayoutParams buttonLayout = new RelativeLayout.LayoutParams(
+        LayoutParams.WRAP_CONTENT,
+        LayoutParams.WRAP_CONTENT
+    );
+    buttonLayout.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+    buttonLayout.setMargins(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+    injectButton.setLayoutParams(buttonLayout);
+
+    // Add click listener to inject JavaScript
+    injectButton.setOnClickListener(new View.OnClickListener() {
+        @Override
+        public void onClick(View v) {
+            // Use the JavaScript code passed from the app
+            if (!injectJsCode.isEmpty()) {
+                inAppWebView.evaluateJavascript(injectJsCode, new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String value) {
+                        try {
+                            JSONObject obj = new JSONObject();
+                            obj.put("type", "inject");
+                            obj.put("data", value);
+                            sendUpdate(obj, true);
+                        } catch (JSONException ex) {
+                            LOG.e(LOG_TAG, "Error sending inject result: " + ex.toString());
+                        }
+                    }
+                });
+            }
+        }
+    });
+
+    footer.addView(injectButton);
+}
+
 
                 // WebView
                 inAppWebView = new WebView(cordova.getActivity());
