@@ -116,12 +116,13 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String HIDE_URL = "hideurlbar";
     private static final String FOOTER = "footer";
     private static final String FOOTER_COLOR = "footercolor";
+    private static final String FOOTER_TITLE = "footertitle";
     private static final String BEFORELOAD = "beforeload";
     private static final String FULLSCREEN = "fullscreen";
 
     private static final int TOOLBAR_HEIGHT = 120;
 
-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR);
+    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -709,7 +710,7 @@ public class InAppBrowser extends CordovaPlugin {
             if (footerColorSet != null) {
                 footerColor = footerColorSet;
             }
-              String footerTitleSet = features.get("footertitle");
+              String footerTitleSet = features.get(FOOTER_TITLE);
               if (footerTitleSet != null) {
                 footerTitle = footerTitleSet;
                }
