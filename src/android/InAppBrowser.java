@@ -979,15 +979,18 @@ public class InAppBrowser extends CordovaPlugin {
                     injectButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            // Send a simple inject event to trigger the JavaScript execution
-                            try {
-                                JSONObject obj = new JSONObject();
-                                obj.put("type", "inject");
-                                obj.put("data", "button_clicked");
-                                sendUpdate(obj, true);
-                            } catch (JSONException ex) {
-                                LOG.e(LOG_TAG, "Error sending inject event: " + ex.toString());
-                            }
+                            // Use the existing injectDeferredObject method to execute JavaScript
+                            String jsCode = "(function() { " +
+                                "var html = document.body.innerHTML; " +
+                                "var parts = []; " +
+                                "for (var i = 0; i < 1; i++) { " +
+                                "  parts.push(html.substring(i * 1000, (i + 1) * 1000)); " +
+                                "} " +
+                                "alert('HTML Content: ' + parts[0]); " +
+                                "return parts; " +
+                                "})();";
+                            
+                            injectDeferredObject(jsCode, null);
                         }
                     });
 
