@@ -765,7 +765,34 @@ public class InAppBrowser extends CordovaPlugin {
                     close.setTextSize(20);
                     if (closeButtonColor != "") close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
                     close.setGravity(android.view.Gravity.CENTER_VERTICAL);
-                    close.setPadding(this.dpToPixels(10), 0, this.dpToPixels(10), 0);
+                    close.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    
+                    // Add gray background with border radius
+                    android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
+                    closeButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    closeButtonShape.setCornerRadius(this.dpToPixels(8));
+                    closeButtonShape.setColor(Color.parseColor("#E0E0E0")); // Light gray background
+                    close.setBackground(closeButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    close.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    closeButtonShape.setColor(Color.parseColor("#BDBDBD"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    closeButtonShape.setColor(Color.parseColor("#E0E0E0"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
+                    
                     _close = close;
                 }
                 else {
@@ -777,6 +804,35 @@ public class InAppBrowser extends CordovaPlugin {
                     close.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     close.getAdjustViewBounds();
 
+                       // Add padding
+                    close.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    
+                    // Add gray background with border radius
+                    android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
+                    closeButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    closeButtonShape.setCornerRadius(this.dpToPixels(8));
+                    closeButtonShape.setColor(Color.parseColor("#E0E0E0")); // Light gray background
+                    close.setBackground(closeButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    close.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    closeButtonShape.setColor(Color.parseColor("#BDBDBD"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    closeButtonShape.setColor(Color.parseColor("#E0E0E0"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
+
                     _close = close;
                 }
 
@@ -784,7 +840,7 @@ public class InAppBrowser extends CordovaPlugin {
                 if (leftToRight) closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
                 else closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
                 _close.setLayoutParams(closeLayoutParams);
-                _close.setBackground(null);
+               
 
                 _close.setContentDescription("Close Button");
                 _close.setId(Integer.valueOf(id));
@@ -963,9 +1019,41 @@ public class InAppBrowser extends CordovaPlugin {
                     Button injectButton = new Button(cordova.getActivity());
                     injectButton.setText("AI");
                     injectButton.setTextColor(Color.WHITE);
-                    injectButton.setBackgroundColor(Color.TRANSPARENT);
+                    
                     injectButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                     injectButton.setAllCaps(false);
+
+                        // Set AI button color (#AB4CFF)
+                    injectButton.setBackgroundColor(Color.parseColor("#AB4CFF"));
+                    
+                    // Add padding
+                    injectButton.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    
+                    // Add border radius (using shape drawable)
+                    android.graphics.drawable.GradientDrawable aiButtonShape = new android.graphics.drawable.GradientDrawable();
+                    aiButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    aiButtonShape.setCornerRadius(this.dpToPixels(8));
+                    aiButtonShape.setColor(Color.parseColor("#AB4CFF"));
+                    injectButton.setBackground(aiButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    injectButton.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    aiButtonShape.setColor(Color.parseColor("#8A3FD1"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    aiButtonShape.setColor(Color.parseColor("#AB4CFF"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
 
                     LinearLayout.LayoutParams buttonLayout = new LinearLayout.LayoutParams(
                         LayoutParams.WRAP_CONTENT,
