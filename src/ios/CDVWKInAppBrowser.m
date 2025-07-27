@@ -1165,26 +1165,27 @@ BOOL isExiting = FALSE;
         self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
     }
     
-    if (browserOptions.footer) {
+        if (browserOptions.footer) {
         CGFloat footerHeight = 60.0;
-
-       // Adjust webView height to account for footer
+        CGFloat footerPadding = 16.0; // Add padding from edges
+        
+        // Adjust webView height to account for footer
         viewBounds.size.height -= footerHeight;
         self.webView.frame = viewBounds;
         
-        // Position footer at the bottom
-        CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
+        // Position footer at the bottom with padding
+        CGRect footerFrame = CGRectMake(footerPadding, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width - (footerPadding * 2), footerHeight);
         self.toolbar.frame = footerFrame;
 
         [self.AIButton sizeToFit];
         CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 16;
+        aiButtonFrame.origin.x = 16; // Keep internal padding
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
-        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16;
+        closeButtonFrame.origin.x = footerFrame.size.width - closeButtonFrame.size.width - 16; // Adjust for footer padding
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
