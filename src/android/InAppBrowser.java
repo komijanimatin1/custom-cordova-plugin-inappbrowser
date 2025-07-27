@@ -925,8 +925,7 @@ public class InAppBrowser extends CordovaPlugin {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
                 footer.setBackgroundColor(_footerColor);
-                RelativeLayout.LayoutParams footerLayout = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
-                footerLayout.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+                LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
                 footer.setLayoutParams(footerLayout);
                 footer.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
 
