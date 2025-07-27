@@ -1140,7 +1140,7 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Don't add the footer unless it's been enabled
                 if (showFooter) {
-                    webViewLayout.addView(footer);
+                    main.addView(footer);
                 }
 
                 WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
