@@ -45,6 +45,9 @@
 @property (nonatomic, assign) BOOL hidden;
 @property (nonatomic, assign) BOOL disallowoverscroll;
 @property (nonatomic, copy) NSString* beforeload;
+@property (nonatomic, assign) BOOL footer;
+@property (nonatomic, copy) NSString* footertitle;
+@property (nonatomic, assign) BOOL injectbutton;
 
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 

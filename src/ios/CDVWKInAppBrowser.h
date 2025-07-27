@@ -46,14 +46,16 @@
 - (void)show:(CDVInvokedUrlCommand*)command;
 - (void)hide:(CDVInvokedUrlCommand*)command;
 - (void)loadAfterBeforeload:(CDVInvokedUrlCommand*)command;
+- (void)sendEvent:(NSString*)event withData:(id)data;
 
 @end
 
 @interface CDVWKInAppBrowserViewController : UIViewController <CDVScreenOrientationDelegate,WKNavigationDelegate,WKUIDelegate,WKScriptMessageHandler,UIAdaptivePresentationControllerDelegate>{
     @private
-    CDVInAppBrowserOptions *_browserOptions;
     NSDictionary *_settings;
 }
+
+@property (nonatomic, strong) CDVInAppBrowserOptions* browserOptions;
 
 @property (nonatomic, strong) IBOutlet WKWebView* webView;
 @property (nonatomic, strong) IBOutlet WKWebViewConfiguration* configuration;
@@ -62,7 +64,10 @@
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* backButton;
 @property (nonatomic, strong) IBOutlet UIBarButtonItem* forwardButton;
 @property (nonatomic, strong) IBOutlet UIActivityIndicatorView* spinner;
-@property (nonatomic, strong) IBOutlet UIToolbar* toolbar;
+@property (nonatomic, strong) IBOutlet UIView* toolbar;
+@property (nonatomic, strong) IBOutlet UIButton* AIButton;
+@property (nonatomic, strong) IBOutlet UILabel* footerTitleLabel;
+@property (nonatomic, strong) IBOutlet UIButton* closeButton;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;

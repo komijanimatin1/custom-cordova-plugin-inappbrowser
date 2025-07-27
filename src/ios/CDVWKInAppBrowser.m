@@ -19,6 +19,20 @@
 
 #import "CDVWKInAppBrowser.h"
 #import <Cordova/NSDictionary+CordovaPreferences.h>
+
+@implementation UIColor (HexColor)
+
++ (UIColor *)colorWithHexString:(NSString *)hexString {
+    unsigned rgbValue = 0;
+    NSScanner *scanner = [NSScanner scannerWithString:hexString];
+    [scanner setScanLocation:1]; // bypass '#' character
+    [scanner scanHexInt:&rgbValue];
+    return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0
+                           green:((rgbValue & 0xFF00) >> 8)/255.0
+                            blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
+}
+
+@end
 #import <Cordova/CDVWebViewProcessPoolFactory.h>
 #import <Cordova/CDVPluginResult.h>
 
@@ -163,8 +177,20 @@ static CDVWKInAppBrowser* instance = nil;
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
-        int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
-        [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
+        [self.inAppBrowserViewController.closeButton setTitle:browserOptions.closebuttoncaption forState:UIControlStateNormal];
+        if (browserOptions.closebuttoncolor != nil) {
+            [self.inAppBrowserViewController.closeButton setTitleColor:[UIColor colorWithHexString:browserOptions.closebuttoncolor] forState:UIControlStateNormal];
+        }
+    }
+
+    if (browserOptions.footer) {
+        self.inAppBrowserViewController.toolbar.hidden = NO;
+        self.inAppBrowserViewController.AIButton.hidden = !browserOptions.injectbutton;
+        if (browserOptions.footertitle != nil) {
+            self.inAppBrowserViewController.footerTitleLabel.text = browserOptions.footertitle;
+        }
+    } else {
+        self.inAppBrowserViewController.toolbar.hidden = YES;
     }
     // Set Presentation Style
     UIModalPresentationStyle presentationStyle = UIModalPresentationFullScreen; // default
@@ -332,6 +358,21 @@ static CDVWKInAppBrowser* instance = nil;
     //_beforeload = @"";
     _waitForBeforeload = NO;
     [self.inAppBrowserViewController navigateTo:url];
+}
+
+- (void)sendEvent:(NSString*)event withData:(id)data
+{
+    if (self.callbackId != nil) {
+        NSMutableDictionary* message = [NSMutableDictionary dictionary];
+        [message setObject:event forKey:@"type"];
+        if (data != nil) {
+            [message setObject:data forKey:@"data"];
+        }
+
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+    }
 }
 
 // This is a helper method for the inject{Script|Style}{Code|File} API calls, which
@@ -566,6 +607,10 @@ static CDVWKInAppBrowser* instance = nil;
 
 - (void)didFinishNavigation:(WKWebView*)theWebView
 {
+    if (self.inAppBrowserViewController.footerTitleLabel != nil && self.inAppBrowserViewController.browserOptions.footertitle != nil) {
+        self.inAppBrowserViewController.footerTitleLabel.text = self.inAppBrowserViewController.browserOptions.footertitle;
+    }
+
     if (self.callbackId != nil) {
         NSString* url = [theWebView.URL absoluteString];
         if(url == nil){
@@ -636,7 +681,7 @@ static CDVWKInAppBrowser* instance = nil;
 
 @implementation CDVWKInAppBrowserViewController
 
-@synthesize currentURL;
+@synthesize currentURL, browserOptions;
 
 CGFloat lastReducedStatusBarHeight = 0.0;
 BOOL isExiting = FALSE;
@@ -645,7 +690,7 @@ BOOL isExiting = FALSE;
 {
     self = [super init];
     if (self != nil) {
-        _browserOptions = browserOptions;
+        self.browserOptions = browserOptions;
         _settings = settings;
         self.webViewUIDelegate = [[CDVWKInAppBrowserUIDelegate alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]];
         [self.webViewUIDelegate setViewController:self];
@@ -763,35 +808,12 @@ BOOL isExiting = FALSE;
     self.spinner.userInteractionEnabled = NO;
     [self.spinner stopAnimating];
     
-    self.closeButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.closeButton.enabled = YES;
-    
-    UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-    
-    UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
-    
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
-    
-    self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
-    self.toolbar.alpha = 1.000;
-    self.toolbar.autoresizesSubviews = YES;
+
+    self.toolbar = [[UIView alloc] initWithFrame:toolbarFrame];
+    self.toolbar.backgroundColor = [UIColor colorWithHexString:@"#F2F2F2"];
     self.toolbar.autoresizingMask = toolbarIsAtBottom ? (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin) : UIViewAutoresizingFlexibleWidth;
-    self.toolbar.barStyle = UIBarStyleBlackOpaque;
-    self.toolbar.clearsContextBeforeDrawing = NO;
-    self.toolbar.clipsToBounds = NO;
-    self.toolbar.contentMode = UIViewContentModeScaleToFill;
-    self.toolbar.hidden = NO;
-    self.toolbar.multipleTouchEnabled = NO;
-    self.toolbar.opaque = NO;
-    self.toolbar.userInteractionEnabled = YES;
-    if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
-      self.toolbar.barTintColor = [self colorFromHexString:_browserOptions.toolbarcolor];
-    }
-    if (!_browserOptions.toolbartranslucent) { // Set toolbar translucent to no if user sets it in options
-      self.toolbar.translucent = NO;
-    }
     
     CGFloat labelInset = 5.0;
     float locationBarY = toolbarIsAtBottom ? self.view.bounds.size.height - FOOTER_HEIGHT : self.view.bounds.size.height - LOCATIONBAR_HEIGHT;
@@ -825,34 +847,31 @@ BOOL isExiting = FALSE;
     self.addressLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
     self.addressLabel.userInteractionEnabled = NO;
     
-    NSString* frontArrowString = NSLocalizedString(@"►", nil); // create arrow from Unicode char
-    self.forwardButton = [[UIBarButtonItem alloc] initWithTitle:frontArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goForward:)];
-    self.forwardButton.enabled = YES;
-    self.forwardButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.forwardButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    self.AIButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.AIButton.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"];
+    [self.AIButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.AIButton.layer.cornerRadius = 8.0f;
+    self.AIButton.layer.masksToBounds = YES;
+    self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    [self.AIButton setTitle:@"AI" forState:UIControlStateNormal];
+    [self.AIButton addTarget:self action:@selector(injectScript) forControlEvents:UIControlEventTouchUpInside];
+    [self.AIButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
+    [self.AIButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [self.toolbar addSubview:self.AIButton];
 
-    NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
-    self.backButton = [[UIBarButtonItem alloc] initWithTitle:backArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
-    self.backButton.enabled = YES;
-    self.backButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    self.footerTitleLabel = [[UILabel alloc] init];
+    self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
+    [self.toolbar addSubview:self.footerTitleLabel];
 
-    // Filter out Navigation Buttons if user requests so
-    if (_browserOptions.hidenavigationbuttons) {
-        if (_browserOptions.lefttoright) {
-            [self.toolbar setItems:@[flexibleSpaceButton, self.closeButton]];
-        } else {
-            [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
-        }
-    } else if (_browserOptions.lefttoright) {
-        [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.closeButton]];
-    } else {
-        [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
-    }
+    self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"];
+    [self.closeButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    self.closeButton.layer.cornerRadius = 8.0f;
+    self.closeButton.layer.masksToBounds = YES;
+    self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+    [self.closeButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
+    [self.toolbar addSubview:self.closeButton];
     
     self.view.backgroundColor = [UIColor clearColor];
     [self.view addSubview:self.toolbar];
@@ -1070,6 +1089,38 @@ BOOL isExiting = FALSE;
     [self.webView goForward];
 }
 
+- (void)injectScript
+{
+    NSString *jsCode = @"document.documentElement.outerHTML;";
+    [self.webView evaluateJavaScript:jsCode completionHandler:^(id result, NSError *error) {
+        if (error) {
+            NSLog(@"JavaScript error: %@", error);
+        } else {
+            [self.navigationDelegate sendEvent:@"inject" withData:result];
+        }
+    }];
+}
+
+- (void)buttonTouchDown:(UIButton *)sender {
+    [UIView animateWithDuration:0.1 animations:^{
+        if (sender == self.AIButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#8A3FD1"]; // Darker purple
+        } else {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
+        }
+    }];
+}
+
+- (void)buttonTouchUp:(UIButton *)sender {
+    [UIView animateWithDuration:0.1 animations:^{
+        if (sender == self.AIButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"]; // Original purple
+        } else {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
+        }
+    }];
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     [self rePositionViews];
@@ -1098,8 +1149,30 @@ BOOL isExiting = FALSE;
         viewBounds.origin.y += TOOLBAR_HEIGHT;
         self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
     }
-    
+
     self.webView.frame = viewBounds;
+
+    if (_browserOptions.footer) {
+        CGFloat footerHeight = 60.0;
+        CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
+        self.toolbar.frame = footerFrame;
+
+        [self.AIButton sizeToFit];
+        CGRect aiButtonFrame = self.AIButton.frame;
+        aiButtonFrame.origin.x = 16;
+        aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+        self.AIButton.frame = aiButtonFrame;
+
+        [self.closeButton sizeToFit];
+        CGRect closeButtonFrame = self.closeButton.frame;
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16;
+        closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
+        self.closeButton.frame = closeButtonFrame;
+
+        CGFloat titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
+        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
+        self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
+    }
 }
 
 // Helper function to convert hex color string to UIColor
