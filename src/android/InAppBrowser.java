@@ -938,7 +938,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add inject button if enabled
                 if (showInjectButton) {
                     Button injectButton = new Button(cordova.getActivity());
-                    injectButton.setText("Inject JS");
+                    injectButton.setText("AI");
                     injectButton.setTextColor(Color.WHITE);
                     injectButton.setBackgroundColor(Color.TRANSPARENT);
                     injectButton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
