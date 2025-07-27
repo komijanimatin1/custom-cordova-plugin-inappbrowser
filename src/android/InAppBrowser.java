@@ -1006,10 +1006,8 @@ public class InAppBrowser extends CordovaPlugin {
 
 
                 // WebView
-                inAppWebView = new WebView(cordova.getActivity());
-                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
-                webViewLayoutParams.weight = 1; // This makes the WebView take remaining space
-                inAppWebView.setLayoutParams(webViewLayoutParams);
+               inAppWebView = new WebView(cordova.getActivity());
+                inAppWebView.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
                 inAppWebView.setId(Integer.valueOf(6));
                 // File Chooser Implemented ChromeClient
                 inAppWebView.setWebChromeClient(new InAppChromeClient(thatWebView) {
@@ -1138,6 +1136,9 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add our webview to our main view/layout
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
                 webViewLayout.addView(inAppWebView);
+                   LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
+                webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
+                webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
 
                 // Don't add the footer unless it's been enabled
