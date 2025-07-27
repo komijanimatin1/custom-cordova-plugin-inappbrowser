@@ -520,7 +520,7 @@ static CDVWKInAppBrowser* instance = nil;
     }
     
     if(errorMessage != nil){
-        NSLog(errorMessage);
+        NSLog(@"%@", errorMessage);
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                                       messageAsDictionary:@{@"type":@"loaderror", @"url":[url absoluteString], @"code": @"-1", @"message": errorMessage}];
         [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
@@ -710,8 +710,8 @@ BOOL isExiting = FALSE;
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
     
     CGRect webViewBounds = self.view.bounds;
-    BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
-    webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    webViewBounds.size.height -= browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -733,9 +733,9 @@ BOOL isExiting = FALSE;
     [configuration.userContentController addScriptMessageHandler:self name:IAB_BRIDGE_NAME];
     
     //WKWebView options
-    configuration.allowsInlineMediaPlayback = _browserOptions.allowinlinemediaplayback;
-    configuration.ignoresViewportScaleLimits = _browserOptions.enableviewportscale;
-    if(_browserOptions.mediaplaybackrequiresuseraction == YES){
+    configuration.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
+    configuration.ignoresViewportScaleLimits = browserOptions.enableviewportscale;
+    if(browserOptions.mediaplaybackrequiresuseraction == YES){
         configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
     }else{
         configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
@@ -786,14 +786,22 @@ BOOL isExiting = FALSE;
     self.webView.multipleTouchEnabled = YES;
     self.webView.opaque = YES;
     self.webView.userInteractionEnabled = YES;
-    self.automaticallyAdjustsScrollViewInsets = YES ;
+    if (@available(iOS 11.0, *)) {
+        self.webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAutomatic;
+    } else {
+        self.automaticallyAdjustsScrollViewInsets = YES;
+    }
     [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
     self.webView.allowsLinkPreview = NO;
     self.webView.allowsBackForwardNavigationGestures = NO;
     
     [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
     
-    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    if (@available(iOS 13.0, *)) {
+        self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+    } else {
+        self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    }
     self.spinner.alpha = 1.000;
     self.spinner.autoresizesSubviews = YES;
     self.spinner.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin);
@@ -811,8 +819,8 @@ BOOL isExiting = FALSE;
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
 
-    self.toolbar = [[UIView alloc] initWithFrame:toolbarFrame];
-    self.toolbar.backgroundColor = [UIColor colorWithHexString:@"#F2F2F2"];
+    self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
+    self.toolbar.barTintColor = [UIColor colorWithHexString:@"#F2F2F2"];
     self.toolbar.autoresizingMask = toolbarIsAtBottom ? (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin) : UIViewAutoresizingFlexibleWidth;
     
     CGFloat labelInset = 5.0;
@@ -1129,6 +1137,12 @@ BOOL isExiting = FALSE;
 }
 
 - (float) getStatusBarOffset {
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *windowScene = UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
+        if ([windowScene isKindOfClass:[UIWindowScene class]]) {
+            return windowScene.statusBarManager.statusBarFrame.size.height;
+        }
+    }
     return (float) [[UIApplication sharedApplication] statusBarFrame].size.height;
 }
 
@@ -1144,7 +1158,7 @@ BOOL isExiting = FALSE;
     viewBounds.size.height = viewBounds.size.height - statusBarHeight + lastReducedStatusBarHeight;
     lastReducedStatusBarHeight = statusBarHeight;
     
-    if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
+    if ((browserOptions.toolbar) && ([browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
         // if we have to display the toolbar on top of the web view, we need to account for its height
         viewBounds.origin.y += TOOLBAR_HEIGHT;
         self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
@@ -1152,7 +1166,7 @@ BOOL isExiting = FALSE;
 
     self.webView.frame = viewBounds;
 
-    if (_browserOptions.footer) {
+    if (browserOptions.footer) {
         CGFloat footerHeight = 60.0;
         CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
         self.toolbar.frame = footerFrame;
@@ -1196,8 +1210,8 @@ BOOL isExiting = FALSE;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     
-    NSLog(_browserOptions.hidespinner ? @"Yes" : @"No");
-    if(!_browserOptions.hidespinner) {
+    NSLog(browserOptions.hidespinner ? @"Yes" : @"No");
+    if(!browserOptions.hidespinner) {
         [self.spinner startAnimating];
     }
     
