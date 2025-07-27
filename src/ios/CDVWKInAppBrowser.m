@@ -1164,11 +1164,15 @@ BOOL isExiting = FALSE;
         viewBounds.origin.y += TOOLBAR_HEIGHT;
         self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
     }
-
-    self.webView.frame = viewBounds;
-
+    
     if (browserOptions.footer) {
         CGFloat footerHeight = 60.0;
+
+       // Adjust webView height to account for footer
+        viewBounds.size.height -= footerHeight;
+        self.webView.frame = viewBounds;
+        
+        // Position footer at the bottom
         CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
         self.toolbar.frame = footerFrame;
 
