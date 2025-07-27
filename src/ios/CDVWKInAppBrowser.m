@@ -711,7 +711,15 @@ BOOL isExiting = FALSE;
     
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
-    webViewBounds.size.height -= browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    
+    // Calculate proper height reduction based on footer vs toolbar
+    if (browserOptions.footer) {
+        webViewBounds.size.height -= 70.0; // Footer height
+    } else if (browserOptions.location) {
+        webViewBounds.size.height -= FOOTER_HEIGHT;
+    } else {
+        webViewBounds.size.height -= TOOLBAR_HEIGHT;
+    }
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -932,7 +940,11 @@ BOOL isExiting = FALSE;
             // put locationBar on top of the toolBar
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 70.0; // Footer height
+            } else {
+                webViewBounds.size.height -= FOOTER_HEIGHT;
+            }
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -955,7 +967,11 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 70.0; // Footer height
+            } else {
+                webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            }
             [self setWebViewFrame:webViewBounds];
         } else {
             // no toolBar, expand webView to screen dimensions
@@ -983,14 +999,22 @@ BOOL isExiting = FALSE;
         if (locationbarVisible) {
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 70.0; // Footer height
+            } else {
+                webViewBounds.size.height -= FOOTER_HEIGHT;
+            }
             locationbarFrame.origin.y = webViewBounds.size.height;
             self.addressLabel.frame = locationbarFrame;
             self.toolbar.frame = toolbarFrame;
         } else {
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 70.0; // Footer height
+            } else {
+                webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            }
             self.toolbar.frame = toolbarFrame;
         }
         
@@ -1148,49 +1172,58 @@ BOOL isExiting = FALSE;
 }
 
 - (void) rePositionViews {
-    CGRect viewBounds = [self.webView bounds];
     CGFloat statusBarHeight = [self getStatusBarOffset];
+    CGFloat footerHeight = 70.0;
     
-    // orientation portrait or portraitUpsideDown: status bar is on the top and web view is to be aligned to the bottom of the status bar
-    // orientation landscapeLeft or landscapeRight: status bar height is 0 in but lets account for it in case things ever change in the future
-    viewBounds.origin.y = statusBarHeight;
+    // Calculate the available height for the webView
+    CGFloat availableHeight = self.view.bounds.size.height - statusBarHeight;
     
-    // account for web view height portion that may have been reduced by a previous call to this method
-    viewBounds.size.height = viewBounds.size.height - statusBarHeight + lastReducedStatusBarHeight;
-    lastReducedStatusBarHeight = statusBarHeight;
-    
-    if ((browserOptions.toolbar) && ([browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
-        // if we have to display the toolbar on top of the web view, we need to account for its height
-        viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
-    }
-    
-        if (browserOptions.footer) {
-        CGFloat footerHeight = 60.0;
+    if (browserOptions.footer) {
+        // When footer is enabled, reduce available height for webView
+        availableHeight -= footerHeight;
         
-        // Position footer at the bottom (full width)
+        // Position footer at the bottom
         CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
         self.toolbar.frame = footerFrame;
         
-        // Adjust webView height to account for footer
-        viewBounds.size.height -= footerHeight;
-        self.webView.frame = viewBounds;
-
+        // Position webView to fill the remaining space
+        CGRect webViewFrame = CGRectMake(0, statusBarHeight, self.view.bounds.size.width, availableHeight);
+        self.webView.frame = webViewFrame;
+        
+        // Position buttons and title in footer
         [self.AIButton sizeToFit];
         CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 20; // Add more padding from left edge
+        aiButtonFrame.origin.x = 20;
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
-        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 20; // Add more padding from right edge
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 20;
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
         CGFloat titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
         CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
+        
+    } else {
+        // Standard toolbar positioning (when footer is disabled)
+        CGRect viewBounds = self.view.bounds;
+        viewBounds.origin.y = statusBarHeight;
+        viewBounds.size.height -= statusBarHeight;
+        
+        // account for web view height portion that may have been reduced by a previous call to this method
+        viewBounds.size.height = viewBounds.size.height + lastReducedStatusBarHeight;
+        lastReducedStatusBarHeight = statusBarHeight;
+        
+        if ((browserOptions.toolbar) && ([browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
+            // if we have to display the toolbar on top of the web view, we need to account for its height
+            viewBounds.origin.y += TOOLBAR_HEIGHT;
+            self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+        }
+        
+        self.webView.frame = viewBounds;
     }
 }
 
