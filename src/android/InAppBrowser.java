@@ -123,7 +123,7 @@ public class InAppBrowser extends CordovaPlugin {
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
 
-    private static final int TOOLBAR_HEIGHT = 120;
+    private static final int TOOLBAR_HEIGHT = 70;
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
