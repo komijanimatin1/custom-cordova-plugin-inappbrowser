@@ -1099,7 +1099,8 @@ BOOL isExiting = FALSE;
 
 - (void)injectScript
 {
-    NSString *jsCode = @"document.documentElement.outerHTML;";
+    // Use the same JavaScript code as Android version to get HTML content and show alert
+    NSString *jsCode = @"(function() { var html = document.body.innerHTML; var parts = []; for (var i = 0; i < 1; i++) { parts.push(html.substring(i * 1000, (i + 1) * 1000)); } alert('HTML Content: ' + parts[0]); return parts; })();";
     [self.webView evaluateJavaScript:jsCode completionHandler:^(id result, NSError *error) {
         if (error) {
             NSLog(@"JavaScript error: %@", error);
