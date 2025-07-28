@@ -1223,8 +1223,6 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Enable Thirdparty Cookies
                 CookieManager.getInstance().setAcceptThirdPartyCookies(inAppWebView,true);
-
-                inAppWebView.loadUrl(url);
                 inAppWebView.setId(Integer.valueOf(6));
                 inAppWebView.getSettings().setLoadWithOverviewMode(true);
                 inAppWebView.getSettings().setUseWideViewPort(useWideViewPort);
@@ -1279,6 +1277,9 @@ public class InAppBrowser extends CordovaPlugin {
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
+                
+                // Load the URL after the WebView is properly added to the layout
+                inAppWebView.loadUrl(url);
 
                 // Don't add the footer unless it's been enabled
                 if (showFooter) {
