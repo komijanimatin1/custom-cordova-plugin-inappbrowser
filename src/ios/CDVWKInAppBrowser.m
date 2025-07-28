@@ -19,6 +19,20 @@
 
 #import "CDVWKInAppBrowser.h"
 #import <Cordova/NSDictionary+CordovaPreferences.h>
+
+@implementation UIColor (HexColor)
+
++ (UIColor *)colorWithHexString:(NSString *)hexString {
+    unsigned rgbValue = 0;
+    NSScanner *scanner = [NSScanner scannerWithString:hexString];
+    [scanner setScanLocation:1]; // bypass '#' character
+    [scanner scanHexInt:&rgbValue];
+    return [UIColor colorWithRed:((rgbValue & 0xFF0000) >> 16)/255.0
+                           green:((rgbValue & 0xFF00) >> 8)/255.0
+                            blue:(rgbValue & 0xFF)/255.0 alpha:1.0];
+}
+
+@end
 #import <Cordova/CDVWebViewProcessPoolFactory.h>
 #import <Cordova/CDVPluginResult.h>
 
@@ -163,8 +177,20 @@ static CDVWKInAppBrowser* instance = nil;
     [self.inAppBrowserViewController showLocationBar:browserOptions.location];
     [self.inAppBrowserViewController showToolBar:browserOptions.toolbar :browserOptions.toolbarposition];
     if (browserOptions.closebuttoncaption != nil || browserOptions.closebuttoncolor != nil) {
-        int closeButtonIndex = browserOptions.lefttoright ? (browserOptions.hidenavigationbuttons ? 1 : 4) : 0;
-        [self.inAppBrowserViewController setCloseButtonTitle:browserOptions.closebuttoncaption :browserOptions.closebuttoncolor :closeButtonIndex];
+        [self.inAppBrowserViewController.closeButton setTitle:browserOptions.closebuttoncaption forState:UIControlStateNormal];
+        if (browserOptions.closebuttoncolor != nil) {
+            [self.inAppBrowserViewController.closeButton setTitleColor:[UIColor colorWithHexString:browserOptions.closebuttoncolor] forState:UIControlStateNormal];
+        }
+    }
+
+    if (browserOptions.footer) {
+        self.inAppBrowserViewController.toolbar.hidden = NO;
+        self.inAppBrowserViewController.AIButton.hidden = !browserOptions.injectbutton;
+        if (browserOptions.footertitle != nil) {
+            self.inAppBrowserViewController.footerTitleLabel.text = browserOptions.footertitle;
+        }
+    } else {
+        self.inAppBrowserViewController.toolbar.hidden = YES;
     }
     // Set Presentation Style
     UIModalPresentationStyle presentationStyle = UIModalPresentationFullScreen; // default
@@ -334,6 +360,21 @@ static CDVWKInAppBrowser* instance = nil;
     [self.inAppBrowserViewController navigateTo:url];
 }
 
+- (void)sendEvent:(NSString*)event withData:(id)data
+{
+    if (self.callbackId != nil) {
+        NSMutableDictionary* message = [NSMutableDictionary dictionary];
+        [message setObject:event forKey:@"type"];
+        if (data != nil) {
+            [message setObject:data forKey:@"data"];
+        }
+
+        CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
+        [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
+    }
+}
+
 // This is a helper method for the inject{Script|Style}{Code|File} API calls, which
 // provides a consistent method for injecting JavaScript code into the document.
 //
@@ -479,7 +520,7 @@ static CDVWKInAppBrowser* instance = nil;
     }
     
     if(errorMessage != nil){
-        NSLog(errorMessage);
+        NSLog(@"%@", errorMessage);
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR
                                                       messageAsDictionary:@{@"type":@"loaderror", @"url":[url absoluteString], @"code": @"-1", @"message": errorMessage}];
         [pluginResult setKeepCallback:[NSNumber numberWithBool:YES]];
@@ -566,6 +607,10 @@ static CDVWKInAppBrowser* instance = nil;
 
 - (void)didFinishNavigation:(WKWebView*)theWebView
 {
+    if (self.inAppBrowserViewController.footerTitleLabel != nil && self.inAppBrowserViewController.browserOptions.footertitle != nil) {
+        self.inAppBrowserViewController.footerTitleLabel.text = self.inAppBrowserViewController.browserOptions.footertitle;
+    }
+
     if (self.callbackId != nil) {
         NSString* url = [theWebView.URL absoluteString];
         if(url == nil){
@@ -636,7 +681,7 @@ static CDVWKInAppBrowser* instance = nil;
 
 @implementation CDVWKInAppBrowserViewController
 
-@synthesize currentURL;
+@synthesize currentURL, browserOptions;
 
 CGFloat lastReducedStatusBarHeight = 0.0;
 BOOL isExiting = FALSE;
@@ -645,7 +690,7 @@ BOOL isExiting = FALSE;
 {
     self = [super init];
     if (self != nil) {
-        _browserOptions = browserOptions;
+        self.browserOptions = browserOptions;
         _settings = settings;
         self.webViewUIDelegate = [[CDVWKInAppBrowserUIDelegate alloc] initWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]];
         [self.webViewUIDelegate setViewController:self];
@@ -664,9 +709,27 @@ BOOL isExiting = FALSE;
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
     
+    // Set main view background to light gray (#F0F0F0) like Android version
+    self.view.backgroundColor = [UIColor colorWithRed:240.0/255.0 green:240.0/255.0 blue:240.0/255.0 alpha:1.0];
+    
     CGRect webViewBounds = self.view.bounds;
-    BOOL toolbarIsAtBottom = ![_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
-    webViewBounds.size.height -= _browserOptions.location ? FOOTER_HEIGHT : TOOLBAR_HEIGHT;
+    BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    
+    // Calculate proper height reduction based on footer vs toolbar
+    if (browserOptions.footer) {
+        webViewBounds.size.height -= 120.0; // Updated footer height to match Android (120pt)
+    } else if (browserOptions.location) {
+        webViewBounds.size.height -= FOOTER_HEIGHT;
+    } else {
+        webViewBounds.size.height -= TOOLBAR_HEIGHT;
+    }
+    
+    // Apply 16pt margins to WebView bounds to create spacing from screen edges
+    webViewBounds.origin.x += 16.0;
+    webViewBounds.origin.y += 16.0;
+    webViewBounds.size.width -= 32.0; // 16pt on each side
+    webViewBounds.size.height -= 32.0; // 16pt on top and bottom
+    
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -688,9 +751,9 @@ BOOL isExiting = FALSE;
     [configuration.userContentController addScriptMessageHandler:self name:IAB_BRIDGE_NAME];
     
     //WKWebView options
-    configuration.allowsInlineMediaPlayback = _browserOptions.allowinlinemediaplayback;
-    configuration.ignoresViewportScaleLimits = _browserOptions.enableviewportscale;
-    if(_browserOptions.mediaplaybackrequiresuseraction == YES){
+    configuration.allowsInlineMediaPlayback = browserOptions.allowinlinemediaplayback;
+    configuration.ignoresViewportScaleLimits = browserOptions.enableviewportscale;
+    if(browserOptions.mediaplaybackrequiresuseraction == YES){
         configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeAll;
     }else{
         configuration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
@@ -723,9 +786,23 @@ BOOL isExiting = FALSE;
     }
 #endif
 
+    // Create a container view for the WebView with rounded corners
+    UIView *webViewContainer = [[UIView alloc] initWithFrame:webViewBounds];
+    webViewContainer.backgroundColor = [UIColor whiteColor];
+    webViewContainer.layer.cornerRadius = 20.0; // 20pt border radius to match Android
+    webViewContainer.layer.masksToBounds = YES; // Clip WebView content to rounded corners
+    webViewContainer.clipsToBounds = YES;
     
-    [self.view addSubview:self.webView];
-    [self.view sendSubviewToBack:self.webView];
+    // Add the WebView to the container
+    [webViewContainer addSubview:self.webView];
+    
+    // Set WebView to fill the container
+    self.webView.frame = CGRectMake(0, 0, webViewContainer.frame.size.width, webViewContainer.frame.size.height);
+    self.webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    
+    // Add the container to the main view
+    [self.view addSubview:webViewContainer];
+    [self.view sendSubviewToBack:webViewContainer];
     
     
     self.webView.navigationDelegate = self;
@@ -741,14 +818,22 @@ BOOL isExiting = FALSE;
     self.webView.multipleTouchEnabled = YES;
     self.webView.opaque = YES;
     self.webView.userInteractionEnabled = YES;
-    self.automaticallyAdjustsScrollViewInsets = YES ;
+    if (@available(iOS 11.0, *)) {
+        self.webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAutomatic;
+    } else {
+        self.automaticallyAdjustsScrollViewInsets = YES;
+    }
     [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
     self.webView.allowsLinkPreview = NO;
     self.webView.allowsBackForwardNavigationGestures = NO;
     
     [self.webView.scrollView setContentInsetAdjustmentBehavior:UIScrollViewContentInsetAdjustmentNever];
     
-    self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    if (@available(iOS 13.0, *)) {
+        self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
+    } else {
+        self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+    }
     self.spinner.alpha = 1.000;
     self.spinner.autoresizesSubviews = YES;
     self.spinner.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin | UIViewAutoresizingFlexibleRightMargin);
@@ -763,35 +848,12 @@ BOOL isExiting = FALSE;
     self.spinner.userInteractionEnabled = NO;
     [self.spinner stopAnimating];
     
-    self.closeButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.closeButton.enabled = YES;
-    
-    UIBarButtonItem* flexibleSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFlexibleSpace target:nil action:nil];
-    
-    UIBarButtonItem* fixedSpaceButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemFixedSpace target:nil action:nil];
-    fixedSpaceButton.width = 20;
-    
     float toolbarY = toolbarIsAtBottom ? self.view.bounds.size.height - TOOLBAR_HEIGHT : 0.0;
     CGRect toolbarFrame = CGRectMake(0.0, toolbarY, self.view.bounds.size.width, TOOLBAR_HEIGHT);
-    
+
     self.toolbar = [[UIToolbar alloc] initWithFrame:toolbarFrame];
-    self.toolbar.alpha = 1.000;
-    self.toolbar.autoresizesSubviews = YES;
+    self.toolbar.barTintColor = [UIColor colorWithHexString:@"#F2F2F2"];
     self.toolbar.autoresizingMask = toolbarIsAtBottom ? (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin) : UIViewAutoresizingFlexibleWidth;
-    self.toolbar.barStyle = UIBarStyleBlackOpaque;
-    self.toolbar.clearsContextBeforeDrawing = NO;
-    self.toolbar.clipsToBounds = NO;
-    self.toolbar.contentMode = UIViewContentModeScaleToFill;
-    self.toolbar.hidden = NO;
-    self.toolbar.multipleTouchEnabled = NO;
-    self.toolbar.opaque = NO;
-    self.toolbar.userInteractionEnabled = YES;
-    if (_browserOptions.toolbarcolor != nil) { // Set toolbar color if user sets it in options
-      self.toolbar.barTintColor = [self colorFromHexString:_browserOptions.toolbarcolor];
-    }
-    if (!_browserOptions.toolbartranslucent) { // Set toolbar translucent to no if user sets it in options
-      self.toolbar.translucent = NO;
-    }
     
     CGFloat labelInset = 5.0;
     float locationBarY = toolbarIsAtBottom ? self.view.bounds.size.height - FOOTER_HEIGHT : self.view.bounds.size.height - LOCATIONBAR_HEIGHT;
@@ -825,36 +887,38 @@ BOOL isExiting = FALSE;
     self.addressLabel.textColor = [UIColor colorWithWhite:1.000 alpha:1.000];
     self.addressLabel.userInteractionEnabled = NO;
     
-    NSString* frontArrowString = NSLocalizedString(@"►", nil); // create arrow from Unicode char
-    self.forwardButton = [[UIBarButtonItem alloc] initWithTitle:frontArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goForward:)];
-    self.forwardButton.enabled = YES;
-    self.forwardButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.forwardButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    self.AIButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.AIButton.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"];
+    [self.AIButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    self.AIButton.layer.cornerRadius = 8.0f;
+    self.AIButton.layer.masksToBounds = YES;
+    self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    self.AIButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
+    [self.AIButton setTitle:@"AI" forState:UIControlStateNormal];
+    [self.AIButton addTarget:self action:@selector(injectScript) forControlEvents:UIControlEventTouchUpInside];
+    [self.AIButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
+    [self.AIButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [self.toolbar addSubview:self.AIButton];
 
-    NSString* backArrowString = NSLocalizedString(@"◄", nil); // create arrow from Unicode char
-    self.backButton = [[UIBarButtonItem alloc] initWithTitle:backArrowString style:UIBarButtonItemStylePlain target:self action:@selector(goBack:)];
-    self.backButton.enabled = YES;
-    self.backButton.imageInsets = UIEdgeInsetsZero;
-    if (_browserOptions.navigationbuttoncolor != nil) { // Set button color if user sets it in options
-      self.backButton.tintColor = [self colorFromHexString:_browserOptions.navigationbuttoncolor];
-    }
+    self.footerTitleLabel = [[UILabel alloc] init];
+    self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
+    self.footerTitleLabel.textColor = [UIColor blackColor];
+    self.footerTitleLabel.font = [UIFont systemFontOfSize:28.0]; // Match Android text size
+    [self.toolbar addSubview:self.footerTitleLabel];
 
-    // Filter out Navigation Buttons if user requests so
-    if (_browserOptions.hidenavigationbuttons) {
-        if (_browserOptions.lefttoright) {
-            [self.toolbar setItems:@[flexibleSpaceButton, self.closeButton]];
-        } else {
-            [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton]];
-        }
-    } else if (_browserOptions.lefttoright) {
-        [self.toolbar setItems:@[self.backButton, fixedSpaceButton, self.forwardButton, flexibleSpaceButton, self.closeButton]];
-    } else {
-        [self.toolbar setItems:@[self.closeButton, flexibleSpaceButton, self.backButton, fixedSpaceButton, self.forwardButton]];
-    }
+    self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"];
+    [self.closeButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    self.closeButton.layer.cornerRadius = 8.0f;
+    self.closeButton.layer.masksToBounds = YES;
+    self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
+    [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+    [self.closeButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
+    [self.closeButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
+    [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [self.toolbar addSubview:self.closeButton];
     
-    self.view.backgroundColor = [UIColor clearColor];
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -867,7 +931,26 @@ BOOL isExiting = FALSE;
 
 - (void) setWebViewFrame : (CGRect) frame {
     NSLog(@"Setting the WebView's frame to %@", NSStringFromCGRect(frame));
-    [self.webView setFrame:frame];
+    
+    // Apply 16pt margins to the frame for the container
+    CGRect containerFrame = frame;
+    containerFrame.origin.x += 16.0;
+    containerFrame.origin.y += 16.0;
+    containerFrame.size.width -= 32.0;
+    containerFrame.size.height -= 32.0;
+    
+    // Find the WebView container and update its frame
+    UIView *webViewContainer = nil;
+    for (UIView *subview in self.view.subviews) {
+        if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+            webViewContainer = subview;
+            break;
+        }
+    }
+    
+    if (webViewContainer) {
+        webViewContainer.frame = containerFrame;
+    }
 }
 
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
@@ -905,7 +988,11 @@ BOOL isExiting = FALSE;
             // put locationBar on top of the toolBar
             
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 120.0; // Updated footer height
+            } else {
+                webViewBounds.size.height -= FOOTER_HEIGHT;
+            }
             [self setWebViewFrame:webViewBounds];
             
             locationbarFrame.origin.y = webViewBounds.size.height;
@@ -928,7 +1015,11 @@ BOOL isExiting = FALSE;
             
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 120.0; // Updated footer height
+            } else {
+                webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            }
             [self setWebViewFrame:webViewBounds];
         } else {
             // no toolBar, expand webView to screen dimensions
@@ -956,14 +1047,22 @@ BOOL isExiting = FALSE;
         if (locationbarVisible) {
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
-            webViewBounds.size.height -= FOOTER_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 120.0; // Updated footer height
+            } else {
+                webViewBounds.size.height -= FOOTER_HEIGHT;
+            }
             locationbarFrame.origin.y = webViewBounds.size.height;
             self.addressLabel.frame = locationbarFrame;
             self.toolbar.frame = toolbarFrame;
         } else {
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
-            webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            if (browserOptions.footer) {
+                webViewBounds.size.height -= 120.0; // Updated footer height
+            } else {
+                webViewBounds.size.height -= TOOLBAR_HEIGHT;
+            }
             self.toolbar.frame = toolbarFrame;
         }
         
@@ -1070,6 +1169,39 @@ BOOL isExiting = FALSE;
     [self.webView goForward];
 }
 
+- (void)injectScript
+{
+    // Use the same JavaScript code as Android version to get HTML content and show alert
+    NSString *jsCode = @"(function() { var html = document.body.innerHTML; var parts = []; for (var i = 0; i < 1; i++) { parts.push(html.substring(i * 1000, (i + 1) * 1000)); } alert('HTML Content: ' + parts[0]); return parts; })();";
+    [self.webView evaluateJavaScript:jsCode completionHandler:^(id result, NSError *error) {
+        if (error) {
+            NSLog(@"JavaScript error: %@", error);
+        } else {
+            [self.navigationDelegate sendEvent:@"inject" withData:result];
+        }
+    }];
+}
+
+- (void)buttonTouchDown:(UIButton *)sender {
+    [UIView animateWithDuration:0.1 animations:^{
+        if (sender == self.AIButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#8A3FD1"]; // Darker purple
+        } else if (sender == self.closeButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
+        }
+    }];
+}
+
+- (void)buttonTouchUp:(UIButton *)sender {
+    [UIView animateWithDuration:0.1 animations:^{
+        if (sender == self.AIButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"]; // Original purple
+        } else if (sender == self.closeButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
+        }
+    }];
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     [self rePositionViews];
@@ -1078,28 +1210,98 @@ BOOL isExiting = FALSE;
 }
 
 - (float) getStatusBarOffset {
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *windowScene = UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
+        if ([windowScene isKindOfClass:[UIWindowScene class]]) {
+            return windowScene.statusBarManager.statusBarFrame.size.height;
+        }
+    }
     return (float) [[UIApplication sharedApplication] statusBarFrame].size.height;
 }
 
 - (void) rePositionViews {
-    CGRect viewBounds = [self.webView bounds];
     CGFloat statusBarHeight = [self getStatusBarOffset];
+    CGFloat footerHeight = 120.0; // Updated to match Android (120pt)
     
-    // orientation portrait or portraitUpsideDown: status bar is on the top and web view is to be aligned to the bottom of the status bar
-    // orientation landscapeLeft or landscapeRight: status bar height is 0 in but lets account for it in case things ever change in the future
-    viewBounds.origin.y = statusBarHeight;
+    // Calculate the available height for the webView
+    CGFloat availableHeight = self.view.bounds.size.height - statusBarHeight;
     
-    // account for web view height portion that may have been reduced by a previous call to this method
-    viewBounds.size.height = viewBounds.size.height - statusBarHeight + lastReducedStatusBarHeight;
-    lastReducedStatusBarHeight = statusBarHeight;
-    
-    if ((_browserOptions.toolbar) && ([_browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
-        // if we have to display the toolbar on top of the web view, we need to account for its height
-        viewBounds.origin.y += TOOLBAR_HEIGHT;
-        self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+    if (browserOptions.footer) {
+        // When footer is enabled, reduce available height for webView
+        availableHeight -= footerHeight;
+        
+        // Position footer at the bottom with 16pt padding
+        CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
+        self.toolbar.frame = footerFrame;
+        
+        // Position webView container with 16pt margins and account for status bar
+        CGRect webViewContainerFrame = CGRectMake(16, statusBarHeight + 16, self.view.bounds.size.width - 32, availableHeight - 32);
+        
+        // Find the WebView container (first subview that's not toolbar, addressLabel, or spinner)
+        UIView *webViewContainer = nil;
+        for (UIView *subview in self.view.subviews) {
+            if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+                webViewContainer = subview;
+                break;
+            }
+        }
+        
+        if (webViewContainer) {
+            webViewContainer.frame = webViewContainerFrame;
+        }
+        
+        // Position buttons and title in footer with 16pt padding
+        [self.AIButton sizeToFit];
+        CGRect aiButtonFrame = self.AIButton.frame;
+        aiButtonFrame.origin.x = 16; // 16pt padding from left
+        aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+        self.AIButton.frame = aiButtonFrame;
+
+        [self.closeButton sizeToFit];
+        CGRect closeButtonFrame = self.closeButton.frame;
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right
+        closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
+        self.closeButton.frame = closeButtonFrame;
+
+        CGFloat titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
+        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
+        self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
+        
+    } else {
+        // Standard toolbar positioning (when footer is disabled)
+        CGRect viewBounds = self.view.bounds;
+        viewBounds.origin.y = statusBarHeight;
+        viewBounds.size.height -= statusBarHeight;
+        
+        // account for web view height portion that may have been reduced by a previous call to this method
+        viewBounds.size.height = viewBounds.size.height + lastReducedStatusBarHeight;
+        lastReducedStatusBarHeight = statusBarHeight;
+        
+        if ((browserOptions.toolbar) && ([browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop])) {
+            // if we have to display the toolbar on top of the web view, we need to account for its height
+            viewBounds.origin.y += TOOLBAR_HEIGHT;
+            self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
+        }
+        
+        // Apply 16pt margins to WebView container when footer is disabled
+        viewBounds.origin.x += 16.0;
+        viewBounds.origin.y += 16.0;
+        viewBounds.size.width -= 32.0;
+        viewBounds.size.height -= 32.0;
+        
+        // Find the WebView container and update its frame
+        UIView *webViewContainer = nil;
+        for (UIView *subview in self.view.subviews) {
+            if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+                webViewContainer = subview;
+                break;
+            }
+        }
+        
+        if (webViewContainer) {
+            webViewContainer.frame = viewBounds;
+        }
     }
-    
-    self.webView.frame = viewBounds;
 }
 
 // Helper function to convert hex color string to UIColor
@@ -1123,8 +1325,8 @@ BOOL isExiting = FALSE;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     
-    NSLog(_browserOptions.hidespinner ? @"Yes" : @"No");
-    if(!_browserOptions.hidespinner) {
+    NSLog(browserOptions.hidespinner ? @"Yes" : @"No");
+    if(!browserOptions.hidespinner) {
         [self.spinner startAnimating];
     }
     
