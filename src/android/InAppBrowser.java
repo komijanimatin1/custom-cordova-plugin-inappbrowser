@@ -668,12 +668,12 @@ public class InAppBrowser extends CordovaPlugin {
                 closeModalButton.setColorFilter(Color.WHITE);
                 
                 RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
-                    this.dpToPixels(48),
-                    this.dpToPixels(48)
+                    dpToPixels(48),
+                    dpToPixels(48)
                 );
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                closeButtonParams.setMargins(0, this.dpToPixels(16), this.dpToPixels(16), 0);
+                closeButtonParams.setMargins(0, dpToPixels(16), dpToPixels(16), 0);
                 closeModalButton.setLayoutParams(closeButtonParams);
                 
                 closeModalButton.setOnClickListener(new View.OnClickListener() {
@@ -701,6 +701,18 @@ public class InAppBrowser extends CordovaPlugin {
                 isModalVisible = true;
             }
         });
+    }
+
+    /**
+     * Convert DIP units to Pixels (helper method for modal)
+     */
+    private int dpToPixels(int dipValue) {
+        int value = (int) TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            (float) dipValue,
+            cordova.getActivity().getResources().getDisplayMetrics()
+        );
+        return value;
     }
 
     /**
