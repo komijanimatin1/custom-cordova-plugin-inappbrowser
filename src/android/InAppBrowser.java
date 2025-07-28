@@ -123,7 +123,7 @@ public class InAppBrowser extends CordovaPlugin {
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
 
-    private static final int TOOLBAR_HEIGHT = 70;
+    private static final int TOOLBAR_HEIGHT = 120;
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
@@ -897,6 +897,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Main container layout
                 LinearLayout main = new LinearLayout(cordova.getActivity());
                 main.setOrientation(LinearLayout.VERTICAL);
+                main.setBackgroundColor(Color.parseColor("#F0F0F0")); // Light gray background like the green area in reference
 
                 // Toolbar layout
                 RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
@@ -1006,13 +1007,13 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setBackgroundColor(_footerColor);
                 LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
                 footer.setLayoutParams(footerLayout);
-                footer.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
+                footer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
 
                 // Create horizontal layout for footer content (like flex-direction: row)
                 LinearLayout footerContent = new LinearLayout(cordova.getActivity());
                 footerContent.setOrientation(LinearLayout.HORIZONTAL);
                 footerContent.setGravity(Gravity.CENTER_VERTICAL);
-                footerContent.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+                footerContent.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
                 // Add inject button if enabled
                 if (showInjectButton) {
@@ -1222,8 +1223,6 @@ public class InAppBrowser extends CordovaPlugin {
 
                 // Enable Thirdparty Cookies
                 CookieManager.getInstance().setAcceptThirdPartyCookies(inAppWebView,true);
-
-                inAppWebView.loadUrl(url);
                 inAppWebView.setId(Integer.valueOf(6));
                 inAppWebView.getSettings().setLoadWithOverviewMode(true);
                 inAppWebView.getSettings().setUseWideViewPort(useWideViewPort);
@@ -1247,13 +1246,50 @@ public class InAppBrowser extends CordovaPlugin {
                     main.addView(toolbar);
                 }
 
-                // Add our webview to our main view/layout
+                // Add our webview to our main view/layout with margin and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
-                webViewLayout.addView(inAppWebView);
-                   LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
+                
+                // Create a container for the WebView with border radius
+                RelativeLayout webViewContainer = new RelativeLayout(cordova.getActivity());
+                
+                // Create background drawable with border radius for the container
+                android.graphics.drawable.GradientDrawable containerBackground = new android.graphics.drawable.GradientDrawable();
+                containerBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                containerBackground.setCornerRadius(this.dpToPixels(20)); // Border radius
+                containerBackground.setColor(Color.WHITE); // White background
+                webViewContainer.setBackground(containerBackground);
+                
+                // Enable clipping to make the WebView content respect the border radius
+                webViewContainer.setClipToOutline(true);
+                
+                // Set layout parameters for the container with margin to create spacing
+                RelativeLayout.LayoutParams containerParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                );
+                containerParams.setMargins(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                webViewContainer.setLayoutParams(containerParams);
+                
+                // Set layout parameters for the WebView to fill the container
+                RelativeLayout.LayoutParams webViewParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                );
+                inAppWebView.setLayoutParams(webViewParams);
+                
+                // Add the WebView to the container
+                webViewContainer.addView(inAppWebView);
+                
+                // Add the container to the webViewLayout
+                webViewLayout.addView(webViewContainer);
+                
+                LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
+                
+                // Load the URL after the WebView is properly added to the layout
+                inAppWebView.loadUrl(url);
 
                 // Don't add the footer unless it's been enabled
                 if (showFooter) {

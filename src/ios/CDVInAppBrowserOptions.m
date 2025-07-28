@@ -45,6 +45,9 @@
         self.toolbarcolor = nil;
         self.toolbartranslucent = YES;
         self.beforeload = @"";
+        self.footer = NO;
+        self.footertitle = nil;
+        self.injectbutton = NO;
     }
 
     return self;
