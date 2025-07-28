@@ -1264,15 +1264,12 @@ BOOL isExiting = FALSE;
         modalWebViewContainer.layer.masksToBounds = YES;
         modalWebViewContainer.clipsToBounds = YES;
         
-        // Add padding to modal container
-        modalWebViewContainer.layoutMargins = UIEdgeInsetsMake(8, 8, 8, 8);
-        
-        // Create modal WebView
+        // Create modal WebView - NO PADDING, fill entire modal container
         WKWebViewConfiguration *modalConfiguration = [[WKWebViewConfiguration alloc] init];
         modalConfiguration.allowsInlineMediaPlayback = YES;
         modalConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
         
-        self.modalWebView = [[WKWebView alloc] initWithFrame:CGRectMake(8, 8, modalWidth - 16, modalHeight - 16) configuration:modalConfiguration];
+        self.modalWebView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, modalWidth, modalHeight) configuration:modalConfiguration];
         
         // Configure modal WebView settings
         self.modalWebView.navigationDelegate = self;
@@ -1282,20 +1279,19 @@ BOOL isExiting = FALSE;
         // Set WebViewClient for modal
         self.modalWebView.navigationDelegate = self;
         
-        // Add close button to modal
+        // Add close button OUTSIDE the modal - positioned at top-right corner outside modal container
         UIButton *closeModalButton = [UIButton buttonWithType:UIButtonTypeCustom];
         
-        // Calculate close button position relative to the modal WebView container
-        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth - 50; // 10pt from right edge of modal
-        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y + 10; // 10pt from top edge of modal
+        // Calculate close button position OUTSIDE the modal WebView container (top-right corner)
+        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth + 10; // 10pt outside right edge of modal
+        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y - 20; // 20pt above top edge of modal
         closeModalButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40); // 40pt × 40pt for better touch target
         
-        // Create oval background for close button
+        // Create oval background for close button - NO WHITE BORDER
         closeModalButton.backgroundColor = [UIColor colorWithHexString:@"#FF0000"]; // Red background
         closeModalButton.layer.cornerRadius = 20.0; // Make it circular (half of 40pt)
         closeModalButton.layer.masksToBounds = YES;
-        closeModalButton.layer.borderWidth = 1.0; // 1pt border
-        closeModalButton.layer.borderColor = [UIColor whiteColor].CGColor; // White border
+        // Removed white border - no borderWidth or borderColor
         
         // Set close icon (X)
         [closeModalButton setTitle:@"✕" forState:UIControlStateNormal];
