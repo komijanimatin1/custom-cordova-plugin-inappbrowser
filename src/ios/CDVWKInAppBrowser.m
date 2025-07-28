@@ -833,7 +833,11 @@ BOOL isExiting = FALSE;
     if (@available(iOS 11.0, *)) {
         self.webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAutomatic;
     } else {
+        // This is deprecated but needed for iOS 10 and below
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.automaticallyAdjustsScrollViewInsets = YES;
+        #pragma clang diagnostic pop
     }
     [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
     self.webView.allowsLinkPreview = NO;
@@ -844,7 +848,11 @@ BOOL isExiting = FALSE;
     if (@available(iOS 13.0, *)) {
         self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     } else {
+        // This is deprecated but needed for iOS 12 and below
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+        #pragma clang diagnostic pop
     }
     self.spinner.alpha = 1.000;
     self.spinner.autoresizesSubviews = YES;
@@ -967,18 +975,14 @@ BOOL isExiting = FALSE;
 
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
 {
-    // the advantage of using UIBarButtonSystemItemDone is the system will localize it for you automatically
-    // but, if you want to set this yourself, knock yourself out (we can't set the title for a system Done button, so we have to create a new one)
-    self.closeButton = nil;
-    // Initialize with title if title is set, otherwise the title will be 'Done' localized
-    self.closeButton = title != nil ? [[UIBarButtonItem alloc] initWithTitle:title style:UIBarButtonItemStylePlain target:self action:@selector(close)] : [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.closeButton.enabled = YES;
-    // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
-    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
+    // Update the close button title and color for the footer implementation
+    if (title != nil) {
+        [self.closeButton setTitle:title forState:UIControlStateNormal];
+    }
     
-    NSMutableArray* items = [self.toolbar.items mutableCopy];
-    [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
-    [self.toolbar setItems:items];
+    if (colorString != nil) {
+        [self.closeButton setTitleColor:[self colorFromHexString:colorString] forState:UIControlStateNormal];
+    }
 }
 
 - (void)showLocationBar:(BOOL)show
@@ -1117,9 +1121,16 @@ BOOL isExiting = FALSE;
 - (void)viewDidDisappear:(BOOL)animated
 {
     [super viewDidDisappear:animated];
+    
+    // Handle browser exit
     if (isExiting && (self.navigationDelegate != nil) && [self.navigationDelegate respondsToSelector:@selector(browserExit)]) {
         [self.navigationDelegate browserExit];
         isExiting = FALSE;
+    }
+    
+    // Ensure modal is hidden when view disappears
+    if (self.isModalVisible) {
+        [self hideModalWebView];
     }
 }
 
@@ -1335,24 +1346,20 @@ BOOL isExiting = FALSE;
     }
 }
 
-- (void)viewDidDisappear:(BOOL)animated
-{
-    [super viewDidDisappear:animated];
-    
-    // Ensure modal is hidden when view disappears
-    if (self.isModalVisible) {
-        [self hideModalWebView];
-    }
-}
+
 
 - (float) getStatusBarOffset {
     if (@available(iOS 13.0, *)) {
-        UIWindowScene *windowScene = UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
+        UIWindowScene *windowScene = (UIWindowScene *)UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
         if ([windowScene isKindOfClass:[UIWindowScene class]]) {
             return windowScene.statusBarManager.statusBarFrame.size.height;
         }
     }
+    // This is deprecated but needed for iOS 12 and below
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return (float) [[UIApplication sharedApplication] statusBarFrame].size.height;
+    #pragma clang diagnostic pop
 }
 
 - (void) rePositionViews {
