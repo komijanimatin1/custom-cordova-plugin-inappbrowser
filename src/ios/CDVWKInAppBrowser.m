@@ -1306,7 +1306,7 @@ BOOL isExiting = FALSE;
         
         // Debug: Log close button frame
         NSLog(@"Close button frame: %@", NSStringFromCGRect(closeModalButton.frame));
-        NSLog(@"Close button target action: %@", NSStringFromSelector:@selector(hideModalWebView));
+        NSLog(@"Close button target action: hideModalWebView");
         
         // Add WebView to modal WebView container
         [modalWebViewContainer addSubview:self.modalWebView];
