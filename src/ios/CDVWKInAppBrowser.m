@@ -709,17 +709,27 @@ BOOL isExiting = FALSE;
 {
     // We create the views in code for primarily for ease of upgrades and not requiring an external .xib to be included
     
+    // Set main view background to light gray (#F0F0F0) like Android version
+    self.view.backgroundColor = [UIColor colorWithRed:240.0/255.0 green:240.0/255.0 blue:240.0/255.0 alpha:1.0];
+    
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     
     // Calculate proper height reduction based on footer vs toolbar
     if (browserOptions.footer) {
-        webViewBounds.size.height -= 70.0; // Footer height
+        webViewBounds.size.height -= 120.0; // Updated footer height to match Android (120pt)
     } else if (browserOptions.location) {
         webViewBounds.size.height -= FOOTER_HEIGHT;
     } else {
         webViewBounds.size.height -= TOOLBAR_HEIGHT;
     }
+    
+    // Apply 16pt margins to WebView bounds to create spacing from screen edges
+    webViewBounds.origin.x += 16.0;
+    webViewBounds.origin.y += 16.0;
+    webViewBounds.size.width -= 32.0; // 16pt on each side
+    webViewBounds.size.height -= 32.0; // 16pt on top and bottom
+    
     WKUserContentController* userContentController = [[WKUserContentController alloc] init];
     
     WKWebViewConfiguration* configuration = [[WKWebViewConfiguration alloc] init];
@@ -776,9 +786,23 @@ BOOL isExiting = FALSE;
     }
 #endif
 
+    // Create a container view for the WebView with rounded corners
+    UIView *webViewContainer = [[UIView alloc] initWithFrame:webViewBounds];
+    webViewContainer.backgroundColor = [UIColor whiteColor];
+    webViewContainer.layer.cornerRadius = 20.0; // 20pt border radius to match Android
+    webViewContainer.layer.masksToBounds = YES; // Clip WebView content to rounded corners
+    webViewContainer.clipsToBounds = YES;
     
-    [self.view addSubview:self.webView];
-    [self.view sendSubviewToBack:self.webView];
+    // Add the WebView to the container
+    [webViewContainer addSubview:self.webView];
+    
+    // Set WebView to fill the container
+    self.webView.frame = CGRectMake(0, 0, webViewContainer.frame.size.width, webViewContainer.frame.size.height);
+    self.webView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    
+    // Add the container to the main view
+    [self.view addSubview:webViewContainer];
+    [self.view sendSubviewToBack:webViewContainer];
     
     
     self.webView.navigationDelegate = self;
@@ -869,6 +893,7 @@ BOOL isExiting = FALSE;
     self.AIButton.layer.cornerRadius = 8.0f;
     self.AIButton.layer.masksToBounds = YES;
     self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    self.AIButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
     [self.AIButton setTitle:@"AI" forState:UIControlStateNormal];
     [self.AIButton addTarget:self action:@selector(injectScript) forControlEvents:UIControlEventTouchUpInside];
     [self.AIButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
@@ -877,6 +902,8 @@ BOOL isExiting = FALSE;
 
     self.footerTitleLabel = [[UILabel alloc] init];
     self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
+    self.footerTitleLabel.textColor = [UIColor blackColor];
+    self.footerTitleLabel.font = [UIFont systemFontOfSize:28.0]; // Match Android text size
     [self.toolbar addSubview:self.footerTitleLabel];
 
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -885,11 +912,13 @@ BOOL isExiting = FALSE;
     self.closeButton.layer.cornerRadius = 8.0f;
     self.closeButton.layer.masksToBounds = YES;
     self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+    self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
     [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
     [self.closeButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
+    [self.closeButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
+    [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.closeButton];
     
-    self.view.backgroundColor = [UIColor clearColor];
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
     [self.view addSubview:self.spinner];
@@ -902,7 +931,26 @@ BOOL isExiting = FALSE;
 
 - (void) setWebViewFrame : (CGRect) frame {
     NSLog(@"Setting the WebView's frame to %@", NSStringFromCGRect(frame));
-    [self.webView setFrame:frame];
+    
+    // Apply 16pt margins to the frame for the container
+    CGRect containerFrame = frame;
+    containerFrame.origin.x += 16.0;
+    containerFrame.origin.y += 16.0;
+    containerFrame.size.width -= 32.0;
+    containerFrame.size.height -= 32.0;
+    
+    // Find the WebView container and update its frame
+    UIView *webViewContainer = nil;
+    for (UIView *subview in self.view.subviews) {
+        if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+            webViewContainer = subview;
+            break;
+        }
+    }
+    
+    if (webViewContainer) {
+        webViewContainer.frame = containerFrame;
+    }
 }
 
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
@@ -941,7 +989,7 @@ BOOL isExiting = FALSE;
             
             CGRect webViewBounds = self.view.bounds;
             if (browserOptions.footer) {
-                webViewBounds.size.height -= 70.0; // Footer height
+                webViewBounds.size.height -= 120.0; // Updated footer height
             } else {
                 webViewBounds.size.height -= FOOTER_HEIGHT;
             }
@@ -968,7 +1016,7 @@ BOOL isExiting = FALSE;
             // webView take up whole height less toolBar height
             CGRect webViewBounds = self.view.bounds;
             if (browserOptions.footer) {
-                webViewBounds.size.height -= 70.0; // Footer height
+                webViewBounds.size.height -= 120.0; // Updated footer height
             } else {
                 webViewBounds.size.height -= TOOLBAR_HEIGHT;
             }
@@ -1000,7 +1048,7 @@ BOOL isExiting = FALSE;
             // locationBar at the bottom, move locationBar up
             // put toolBar at the bottom
             if (browserOptions.footer) {
-                webViewBounds.size.height -= 70.0; // Footer height
+                webViewBounds.size.height -= 120.0; // Updated footer height
             } else {
                 webViewBounds.size.height -= FOOTER_HEIGHT;
             }
@@ -1011,7 +1059,7 @@ BOOL isExiting = FALSE;
             // no locationBar, so put toolBar at the bottom
             CGRect webViewBounds = self.view.bounds;
             if (browserOptions.footer) {
-                webViewBounds.size.height -= 70.0; // Footer height
+                webViewBounds.size.height -= 120.0; // Updated footer height
             } else {
                 webViewBounds.size.height -= TOOLBAR_HEIGHT;
             }
@@ -1138,7 +1186,7 @@ BOOL isExiting = FALSE;
     [UIView animateWithDuration:0.1 animations:^{
         if (sender == self.AIButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#8A3FD1"]; // Darker purple
-        } else {
+        } else if (sender == self.closeButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
         }
     }];
@@ -1148,7 +1196,7 @@ BOOL isExiting = FALSE;
     [UIView animateWithDuration:0.1 animations:^{
         if (sender == self.AIButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"]; // Original purple
-        } else {
+        } else if (sender == self.closeButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
         }
     }];
@@ -1173,7 +1221,7 @@ BOOL isExiting = FALSE;
 
 - (void) rePositionViews {
     CGFloat statusBarHeight = [self getStatusBarOffset];
-    CGFloat footerHeight = 70.0;
+    CGFloat footerHeight = 120.0; // Updated to match Android (120pt)
     
     // Calculate the available height for the webView
     CGFloat availableHeight = self.view.bounds.size.height - statusBarHeight;
@@ -1182,24 +1230,36 @@ BOOL isExiting = FALSE;
         // When footer is enabled, reduce available height for webView
         availableHeight -= footerHeight;
         
-        // Position footer at the bottom
+        // Position footer at the bottom with 16pt padding
         CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
         self.toolbar.frame = footerFrame;
         
-        // Position webView to fill the remaining space
-        CGRect webViewFrame = CGRectMake(0, statusBarHeight, self.view.bounds.size.width, availableHeight);
-        self.webView.frame = webViewFrame;
+        // Position webView container with 16pt margins and account for status bar
+        CGRect webViewContainerFrame = CGRectMake(16, statusBarHeight + 16, self.view.bounds.size.width - 32, availableHeight - 32);
         
-        // Position buttons and title in footer
+        // Find the WebView container (first subview that's not toolbar, addressLabel, or spinner)
+        UIView *webViewContainer = nil;
+        for (UIView *subview in self.view.subviews) {
+            if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+                webViewContainer = subview;
+                break;
+            }
+        }
+        
+        if (webViewContainer) {
+            webViewContainer.frame = webViewContainerFrame;
+        }
+        
+        // Position buttons and title in footer with 16pt padding
         [self.AIButton sizeToFit];
         CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 20;
+        aiButtonFrame.origin.x = 16; // 16pt padding from left
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
-        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 20;
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
@@ -1223,7 +1283,24 @@ BOOL isExiting = FALSE;
             self.toolbar.frame = CGRectMake(self.toolbar.frame.origin.x, statusBarHeight, self.toolbar.frame.size.width, self.toolbar.frame.size.height);
         }
         
-        self.webView.frame = viewBounds;
+        // Apply 16pt margins to WebView container when footer is disabled
+        viewBounds.origin.x += 16.0;
+        viewBounds.origin.y += 16.0;
+        viewBounds.size.width -= 32.0;
+        viewBounds.size.height -= 32.0;
+        
+        // Find the WebView container and update its frame
+        UIView *webViewContainer = nil;
+        for (UIView *subview in self.view.subviews) {
+            if (subview != self.toolbar && subview != self.addressLabel && subview != self.spinner) {
+                webViewContainer = subview;
+                break;
+            }
+        }
+        
+        if (webViewContainer) {
+            webViewContainer.frame = viewBounds;
+        }
     }
 }
 
