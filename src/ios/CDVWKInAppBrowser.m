@@ -1283,8 +1283,8 @@ BOOL isExiting = FALSE;
         UIButton *closeModalButton = [UIButton buttonWithType:UIButtonTypeCustom];
         
         // Calculate close button position OUTSIDE the modal WebView container (top-right corner)
-        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth + 10; // 10pt outside right edge of modal
-        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y - 20; // 20pt above top edge of modal
+        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth - 5; // 5pt outside right edge of modal
+        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y - 10; // 10pt above top edge of modal
         closeModalButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40); // 40pt × 40pt for better touch target
         
         // Create oval background for close button - NO WHITE BORDER
