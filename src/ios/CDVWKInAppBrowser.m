@@ -1230,6 +1230,8 @@ BOOL isExiting = FALSE;
 #pragma mark - Modal WebView Methods
 
 - (void)showModalWebView {
+    NSLog(@"showModalWebView called, isModalVisible: %@", self.isModalVisible ? @"YES" : @"NO");
+    
     if (self.isModalVisible) {
         return;
     }
@@ -1282,11 +1284,15 @@ BOOL isExiting = FALSE;
         
         // Add close button to modal
         UIButton *closeModalButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        closeModalButton.frame = CGRectMake(modalWidth - 40, 8, 32, 32); // 32pt × 32pt, top-right corner
+        
+        // Calculate close button position relative to the modal WebView container
+        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth - 50; // 10pt from right edge of modal
+        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y + 10; // 10pt from top edge of modal
+        closeModalButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40); // 40pt × 40pt for better touch target
         
         // Create oval background for close button
         closeModalButton.backgroundColor = [UIColor colorWithHexString:@"#FF0000"]; // Red background
-        closeModalButton.layer.cornerRadius = 16.0; // Make it circular
+        closeModalButton.layer.cornerRadius = 20.0; // Make it circular (half of 40pt)
         closeModalButton.layer.masksToBounds = YES;
         closeModalButton.layer.borderWidth = 1.0; // 1pt border
         closeModalButton.layer.borderColor = [UIColor whiteColor].CGColor; // White border
@@ -1294,16 +1300,23 @@ BOOL isExiting = FALSE;
         // Set close icon (X)
         [closeModalButton setTitle:@"✕" forState:UIControlStateNormal];
         [closeModalButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        closeModalButton.titleLabel.font = [UIFont systemFontOfSize:16.0];
+        closeModalButton.titleLabel.font = [UIFont systemFontOfSize:20.0]; // Larger font for better visibility
         
         [closeModalButton addTarget:self action:@selector(hideModalWebView) forControlEvents:UIControlEventTouchUpInside];
+        
+        // Debug: Log close button frame
+        NSLog(@"Close button frame: %@", NSStringFromCGRect(closeModalButton.frame));
+        NSLog(@"Close button target action: %@", NSStringFromSelector:@selector(hideModalWebView));
         
         // Add WebView to modal WebView container
         [modalWebViewContainer addSubview:self.modalWebView];
         
-        // Add close button to modal container (not inside the WebView container)
+        // Add modal WebView container and close button to modal container
         [self.modalContainer addSubview:modalWebViewContainer];
         [self.modalContainer addSubview:closeModalButton];
+        
+        // Make sure close button is on top and accessible
+        [self.modalContainer bringSubviewToFront:closeModalButton];
         
         // Add modal container to the main view
         [self.view addSubview:self.modalContainer];
@@ -1317,15 +1330,19 @@ BOOL isExiting = FALSE;
 }
 
 - (void)hideModalWebView {
+    NSLog(@"hideModalWebView called, isModalVisible: %@", self.isModalVisible ? @"YES" : @"NO");
+    
     if (!self.isModalVisible) {
         return;
     }
     
     dispatch_async(dispatch_get_main_queue(), ^{
+        NSLog(@"Removing modal from view");
         [self.modalContainer removeFromSuperview];
         self.modalContainer = nil;
         self.modalWebView = nil;
         self.isModalVisible = NO;
+        NSLog(@"Modal hidden successfully");
     });
 }
 
@@ -1609,7 +1626,9 @@ BOOL isExiting = FALSE;
                     // Update close button position
                     UIButton *closeButton = self.modalContainer.subviews.lastObject;
                     if ([closeButton isKindOfClass:[UIButton class]]) {
-                        closeButton.frame = CGRectMake(modalWidth - 40, 8, 32, 32);
+                        CGFloat closeButtonX = (size.width - modalWidth) / 2 + modalWidth - 50; // 10pt from right edge of modal
+                        CGFloat closeButtonY = (size.height - modalHeight) / 2 + 10; // 10pt from top edge of modal
+                        closeButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40);
                     }
                 }
             }
