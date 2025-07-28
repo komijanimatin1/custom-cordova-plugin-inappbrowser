@@ -123,7 +123,7 @@ public class InAppBrowser extends CordovaPlugin {
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
 
-    private static final int TOOLBAR_HEIGHT = 70;
+    private static final int TOOLBAR_HEIGHT = 120;
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
@@ -1007,7 +1007,7 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setBackgroundColor(_footerColor);
                 LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
                 footer.setLayoutParams(footerLayout);
-                footer.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
+                footer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
 
                 // Create horizontal layout for footer content (like flex-direction: row)
                 LinearLayout footerContent = new LinearLayout(cordova.getActivity());
@@ -1255,7 +1255,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Create background drawable with border radius for the container
                 android.graphics.drawable.GradientDrawable containerBackground = new android.graphics.drawable.GradientDrawable();
                 containerBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                containerBackground.setCornerRadius(this.dpToPixels(12)); // Border radius
+                containerBackground.setCornerRadius(this.dpToPixels(20)); // Border radius
                 containerBackground.setColor(Color.WHITE); // White background
                 webViewContainer.setBackground(containerBackground);
                 
