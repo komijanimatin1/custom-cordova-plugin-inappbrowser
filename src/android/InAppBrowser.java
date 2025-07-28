@@ -629,11 +629,11 @@ public class InAppBrowser extends CordovaPlugin {
                 // Create modal WebView container with specific dimensions
                 RelativeLayout modalWebViewContainer = new RelativeLayout(cordova.getActivity());
                 
-                // Calculate 60% width and 25% height of screen
+                // Calculate 80% width and 60% height of screen (increased size)
                 int screenWidth = cordova.getActivity().getResources().getDisplayMetrics().widthPixels;
                 int screenHeight = cordova.getActivity().getResources().getDisplayMetrics().heightPixels;
-                int modalWidth = (int) (screenWidth * 0.6); // 60% of screen width
-                int modalHeight = (int) (screenHeight * 0.25); // 25% of screen height
+                int modalWidth = (int) (screenWidth * 0.8); // 80% of screen width
+                int modalHeight = (int) (screenHeight * 0.6); // 60% of screen height
                 
                 // Set layout parameters for modal WebView container
                 RelativeLayout.LayoutParams modalWebViewContainerParams = new RelativeLayout.LayoutParams(
@@ -698,16 +698,16 @@ public class InAppBrowser extends CordovaPlugin {
                 android.graphics.drawable.GradientDrawable closeButtonBackground = new android.graphics.drawable.GradientDrawable();
                 closeButtonBackground.setShape(android.graphics.drawable.GradientDrawable.OVAL);
                 closeButtonBackground.setColor(Color.parseColor("#FF0000")); // Red background
-                closeButtonBackground.setStroke(dpToPixels(2), Color.WHITE); // White border
+                closeButtonBackground.setStroke(dpToPixels(1), Color.WHITE); // White border
                 closeModalButton.setBackground(closeButtonBackground);
                 
                 RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
-                    dpToPixels(40),
-                    dpToPixels(40)
+                    dpToPixels(32),
+                    dpToPixels(32)
                 );
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                closeButtonParams.setMargins(0, -dpToPixels(20), -dpToPixels(20), 0); // Position outside the modal
+                closeButtonParams.setMargins(0, dpToPixels(8), dpToPixels(8), 0); // Position inside the modal, top-right corner
                 closeModalButton.setLayoutParams(closeButtonParams);
                 
                 closeModalButton.setOnClickListener(new View.OnClickListener() {
