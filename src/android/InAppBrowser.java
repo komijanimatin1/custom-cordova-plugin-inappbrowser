@@ -63,6 +63,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.view.ViewGroup;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.Config;
@@ -158,6 +159,11 @@ public class InAppBrowser extends CordovaPlugin {
     private String injectJsCode = "";
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
+    
+    // Modal WebView for AI functionality
+    private WebView modalWebView;
+    private RelativeLayout modalContainer;
+    private boolean isModalVisible = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -356,6 +362,9 @@ public class InAppBrowser extends CordovaPlugin {
      */
     @Override
     public void onReset() {
+        if (isModalVisible) {
+            hideModalWebView();
+        }
         closeDialog();
     }
 
@@ -367,6 +376,9 @@ public class InAppBrowser extends CordovaPlugin {
         if (shouldPauseInAppBrowser) {
             inAppWebView.onPause();
         }
+        if (isModalVisible && modalWebView != null) {
+            modalWebView.onPause();
+        }
     }
 
     /**
@@ -377,6 +389,9 @@ public class InAppBrowser extends CordovaPlugin {
         if (shouldPauseInAppBrowser) {
             inAppWebView.onResume();
         }
+        if (isModalVisible && modalWebView != null) {
+            modalWebView.onResume();
+        }
     }
 
     /**
@@ -384,6 +399,9 @@ public class InAppBrowser extends CordovaPlugin {
      * Stop listener.
      */
     public void onDestroy() {
+        if (isModalVisible) {
+            hideModalWebView();
+        }
         closeDialog();
     }
 
@@ -532,6 +550,11 @@ public class InAppBrowser extends CordovaPlugin {
         this.cordova.getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                // Hide modal if it's visible
+                if (isModalVisible) {
+                    hideModalWebView();
+                }
+                
                 final WebView childView = inAppWebView;
                 // The JS protects against multiple calls, so this should happen only when
                 // closeDialog() is called by other native code.
@@ -580,6 +603,128 @@ public class InAppBrowser extends CordovaPlugin {
     public boolean canGoBack() {
         return this.inAppWebView.canGoBack();
     }
+
+    /**
+     * Show modal WebView for AI functionality
+     */
+    private void showModalWebView() {
+        if (isModalVisible || dialog == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Create modal container
+                modalContainer = new RelativeLayout(cordova.getActivity());
+                modalContainer.setBackgroundColor(Color.parseColor("#80000000")); // Semi-transparent background
+                
+                // Set layout parameters for modal container (positioned absolutely over the main content)
+                RelativeLayout.LayoutParams modalContainerParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                );
+                modalContainer.setLayoutParams(modalContainerParams);
+                
+                // Create modal WebView
+                modalWebView = new WebView(cordova.getActivity());
+                modalWebView.setLayoutParams(new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                ));
+                
+                // Configure modal WebView settings
+                WebSettings modalSettings = modalWebView.getSettings();
+                modalSettings.setJavaScriptEnabled(true);
+                modalSettings.setJavaScriptCanOpenWindowsAutomatically(true);
+                modalSettings.setBuiltInZoomControls(true);
+                modalSettings.setDisplayZoomControls(false);
+                modalSettings.setLoadWithOverviewMode(true);
+                modalSettings.setUseWideViewPort(true);
+                modalSettings.setDomStorageEnabled(true);
+                
+                // Set WebViewClient for modal
+                modalWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        super.onPageFinished(view, url);
+                    }
+                    
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        // Handle external links in modal
+                        if (url.startsWith("http://") || url.startsWith("https://")) {
+                            view.loadUrl(url);
+                            return true;
+                        }
+                        return false;
+                    }
+                });
+                
+                // Add close button to modal
+                ImageButton closeModalButton = new ImageButton(cordova.getActivity());
+                closeModalButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+                closeModalButton.setBackgroundColor(Color.parseColor("#FF0000"));
+                closeModalButton.setColorFilter(Color.WHITE);
+                
+                RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
+                    this.dpToPixels(48),
+                    this.dpToPixels(48)
+                );
+                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                closeButtonParams.setMargins(0, this.dpToPixels(16), this.dpToPixels(16), 0);
+                closeModalButton.setLayoutParams(closeButtonParams);
+                
+                closeModalButton.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hideModalWebView();
+                    }
+                });
+                
+                // Add WebView and close button to modal container
+                modalContainer.addView(modalWebView);
+                modalContainer.addView(closeModalButton);
+                
+                // Add modal container to the main dialog
+                if (dialog.getWindow() != null && dialog.getWindow().getDecorView() != null) {
+                    View decorView = dialog.getWindow().getDecorView();
+                    if (decorView instanceof ViewGroup) {
+                        ((ViewGroup) decorView).addView(modalContainer);
+                    }
+                }
+                
+                // Load Google.com in modal WebView
+                modalWebView.loadUrl("https://google.com");
+                
+                isModalVisible = true;
+            }
+        });
+    }
+
+    /**
+     * Hide modal WebView
+     */
+    private void hideModalWebView() {
+        if (!isModalVisible || modalContainer == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (modalContainer.getParent() != null) {
+                    ((ViewGroup) modalContainer.getParent()).removeView(modalContainer);
+                }
+                modalContainer = null;
+                modalWebView = null;
+                isModalVisible = false;
+            }
+        });
+    }
+
+
 
     /**
      * Has the user set the hardware back button to go back
@@ -1068,18 +1213,12 @@ public class InAppBrowser extends CordovaPlugin {
                     injectButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            // Use the existing injectDeferredObject method to execute JavaScript
-                            String jsCode = "(function() { " +
-                                "var html = document.body.innerHTML; " +
-                                "var parts = []; " +
-                                "for (var i = 0; i < 1; i++) { " +
-                                "  parts.push(html.substring(i * 1000, (i + 1) * 1000)); " +
-                                "} " +
-                                "alert('HTML Content: ' + parts[0]); " +
-                                "return parts; " +
-                                "})();";
-                            
-                            injectDeferredObject(jsCode, null);
+                            // Toggle modal WebView
+                            if (isModalVisible) {
+                                hideModalWebView();
+                            } else {
+                                showModalWebView();
+                            }
                         }
                     });
 
