@@ -1249,29 +1249,23 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add our webview to our main view/layout with margin and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
                 
-                // Create a container for the WebView with margin and border radius
-                RelativeLayout webViewContainer = new RelativeLayout(cordova.getActivity());
+                // Create background drawable with border radius for the WebView
+                android.graphics.drawable.GradientDrawable webViewBackground = new android.graphics.drawable.GradientDrawable();
+                webViewBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                webViewBackground.setCornerRadius(this.dpToPixels(12)); // Border radius
+                webViewBackground.setColor(Color.WHITE); // White background
+                inAppWebView.setBackground(webViewBackground);
                 
-                // Create background drawable with border radius for the container
-                android.graphics.drawable.GradientDrawable containerBackground = new android.graphics.drawable.GradientDrawable();
-                containerBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                containerBackground.setCornerRadius(this.dpToPixels(12)); // Border radius
-                containerBackground.setColor(Color.WHITE); // White background
-                webViewContainer.setBackground(containerBackground);
-                
-                // Add the WebView to the container
-                webViewContainer.addView(inAppWebView);
-                
-                // Set layout parameters for the container with margin to create spacing
-                RelativeLayout.LayoutParams containerLayoutParams = new RelativeLayout.LayoutParams(
-                    LayoutParams.MATCH_PARENT - this.dpToPixels(32), // Reduce width by 32dp total (16dp on each side)
+                // Set layout parameters for the WebView with margin to create spacing
+                RelativeLayout.LayoutParams webViewParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
                     LayoutParams.MATCH_PARENT
                 );
-                containerLayoutParams.setMargins(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
-                webViewContainer.setLayoutParams(containerLayoutParams);
+                webViewParams.setMargins(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                inAppWebView.setLayoutParams(webViewParams);
                 
-                // Add the container to the webViewLayout
-                webViewLayout.addView(webViewContainer);
+                // Add the WebView directly to the webViewLayout
+                webViewLayout.addView(inAppWebView);
                 
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
