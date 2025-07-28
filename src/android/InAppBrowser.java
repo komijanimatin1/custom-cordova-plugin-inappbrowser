@@ -897,6 +897,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Main container layout
                 LinearLayout main = new LinearLayout(cordova.getActivity());
                 main.setOrientation(LinearLayout.VERTICAL);
+                main.setBackgroundColor(Color.parseColor("#F0F0F0")); // Light gray background like the green area in reference
 
                 // Toolbar layout
                 RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
@@ -1012,7 +1013,7 @@ public class InAppBrowser extends CordovaPlugin {
                 LinearLayout footerContent = new LinearLayout(cordova.getActivity());
                 footerContent.setOrientation(LinearLayout.HORIZONTAL);
                 footerContent.setGravity(Gravity.CENTER_VERTICAL);
-                footerContent.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+                footerContent.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
 
                 // Add inject button if enabled
                 if (showInjectButton) {
@@ -1247,10 +1248,27 @@ public class InAppBrowser extends CordovaPlugin {
                     main.addView(toolbar);
                 }
 
-                // Add our webview to our main view/layout
+                // Add our webview to our main view/layout with padding and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
-                webViewLayout.addView(inAppWebView);
-                   LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
+                
+                // Create a container for the WebView with padding and border radius
+                RelativeLayout webViewContainer = new RelativeLayout(cordova.getActivity());
+                webViewContainer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                
+                // Create background drawable with border radius for the container
+                android.graphics.drawable.GradientDrawable containerBackground = new android.graphics.drawable.GradientDrawable();
+                containerBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                containerBackground.setCornerRadius(this.dpToPixels(12)); // Border radius
+                containerBackground.setColor(Color.WHITE); // White background
+                webViewContainer.setBackground(containerBackground);
+                
+                // Add the WebView to the container
+                webViewContainer.addView(inAppWebView);
+                
+                // Add the container to the webViewLayout
+                webViewLayout.addView(webViewContainer);
+                
+                LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
