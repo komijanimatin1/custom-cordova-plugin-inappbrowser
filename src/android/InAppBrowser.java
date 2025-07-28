@@ -626,6 +626,34 @@ public class InAppBrowser extends CordovaPlugin {
                 );
                 modalContainer.setLayoutParams(modalContainerParams);
                 
+                // Create modal WebView container with specific dimensions
+                RelativeLayout modalWebViewContainer = new RelativeLayout(cordova.getActivity());
+                
+                // Calculate 60% width and 25% height of screen
+                int screenWidth = cordova.getActivity().getResources().getDisplayMetrics().widthPixels;
+                int screenHeight = cordova.getActivity().getResources().getDisplayMetrics().heightPixels;
+                int modalWidth = (int) (screenWidth * 0.6); // 60% of screen width
+                int modalHeight = (int) (screenHeight * 0.25); // 25% of screen height
+                
+                // Set layout parameters for modal WebView container
+                RelativeLayout.LayoutParams modalWebViewContainerParams = new RelativeLayout.LayoutParams(
+                    modalWidth,
+                    modalHeight
+                );
+                // Center the modal
+                modalWebViewContainerParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+                modalWebViewContainer.setLayoutParams(modalWebViewContainerParams);
+                
+                // Add rounded corners and background to modal container
+                android.graphics.drawable.GradientDrawable modalBackground = new android.graphics.drawable.GradientDrawable();
+                modalBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                modalBackground.setCornerRadius(dpToPixels(16)); // Rounded corners
+                modalBackground.setColor(Color.WHITE); // White background
+                modalWebViewContainer.setBackground(modalBackground);
+                
+                // Add padding to modal container
+                modalWebViewContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+                
                 // Create modal WebView
                 modalWebView = new WebView(cordova.getActivity());
                 modalWebView.setLayoutParams(new RelativeLayout.LayoutParams(
@@ -664,16 +692,22 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add close button to modal
                 ImageButton closeModalButton = new ImageButton(cordova.getActivity());
                 closeModalButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-                closeModalButton.setBackgroundColor(Color.parseColor("#FF0000"));
                 closeModalButton.setColorFilter(Color.WHITE);
                 
+                // Create oval background for close button
+                android.graphics.drawable.GradientDrawable closeButtonBackground = new android.graphics.drawable.GradientDrawable();
+                closeButtonBackground.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+                closeButtonBackground.setColor(Color.parseColor("#FF0000")); // Red background
+                closeButtonBackground.setStroke(dpToPixels(2), Color.WHITE); // White border
+                closeModalButton.setBackground(closeButtonBackground);
+                
                 RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
-                    dpToPixels(48),
-                    dpToPixels(48)
+                    dpToPixels(40),
+                    dpToPixels(40)
                 );
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
                 closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                closeButtonParams.setMargins(0, dpToPixels(16), dpToPixels(16), 0);
+                closeButtonParams.setMargins(0, -dpToPixels(20), -dpToPixels(20), 0); // Position outside the modal
                 closeModalButton.setLayoutParams(closeButtonParams);
                 
                 closeModalButton.setOnClickListener(new View.OnClickListener() {
@@ -683,8 +717,11 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
                 
-                // Add WebView and close button to modal container
-                modalContainer.addView(modalWebView);
+                // Add WebView to modal WebView container
+                modalWebViewContainer.addView(modalWebView);
+                
+                // Add modal WebView container and close button to modal container
+                modalContainer.addView(modalWebViewContainer);
                 modalContainer.addView(closeModalButton);
                 
                 // Add modal container to the main dialog
