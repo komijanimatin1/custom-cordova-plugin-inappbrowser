@@ -1248,12 +1248,11 @@ public class InAppBrowser extends CordovaPlugin {
                     main.addView(toolbar);
                 }
 
-                // Add our webview to our main view/layout with padding and border radius
+                // Add our webview to our main view/layout with margin and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
                 
-                // Create a container for the WebView with padding and border radius
+                // Create a container for the WebView with margin and border radius
                 RelativeLayout webViewContainer = new RelativeLayout(cordova.getActivity());
-                webViewContainer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
                 
                 // Create background drawable with border radius for the container
                 android.graphics.drawable.GradientDrawable containerBackground = new android.graphics.drawable.GradientDrawable();
@@ -1264,6 +1263,14 @@ public class InAppBrowser extends CordovaPlugin {
                 
                 // Add the WebView to the container
                 webViewContainer.addView(inAppWebView);
+                
+                // Set layout parameters for the container with margin to create spacing
+                RelativeLayout.LayoutParams containerLayoutParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT - this.dpToPixels(32), // Reduce width by 32dp total (16dp on each side)
+                    LayoutParams.MATCH_PARENT
+                );
+                containerLayoutParams.setMargins(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                webViewContainer.setLayoutParams(containerLayoutParams);
                 
                 // Add the container to the webViewLayout
                 webViewLayout.addView(webViewContainer);
