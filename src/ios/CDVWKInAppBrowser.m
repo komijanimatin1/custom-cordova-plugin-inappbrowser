@@ -964,8 +964,8 @@ BOOL isExiting = FALSE;
     [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.closeButton];
     
-    // Initialize navigation state tracking
-    self.hasNavigatedFromInitialPage = NO;
+    // Initialize close button title
+    [self updateCloseButtonTitle];
     
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
@@ -1451,7 +1451,8 @@ BOOL isExiting = FALSE;
 }
 
 - (void)updateCloseButtonTitle {
-    if (self.hasNavigatedFromInitialPage && self.webView.canGoBack) {
+    // Always check the current state of the WebView
+    if (self.webView.canGoBack) {
         [self.closeButton setTitle:@"Back" forState:UIControlStateNormal];
     } else {
         [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
@@ -1459,19 +1460,11 @@ BOOL isExiting = FALSE;
 }
 
 - (void)closeOrGoBack {
-    // Check if we can go back and we have navigated from the initial page
-    if (self.hasNavigatedFromInitialPage && self.webView.canGoBack) {
+    // Check if we can go back
+    if (self.webView.canGoBack) {
         // Go back in WebView history
         [self.webView goBack];
-        
-        // Update navigation state after going back
-        dispatch_async(dispatch_get_main_queue(), ^{
-            // Check if we're back to the initial page
-            if (!self.webView.canGoBack) {
-                self.hasNavigatedFromInitialPage = NO;
-            }
-            [self updateCloseButtonTitle];
-        });
+        // Navigation state will be updated in didFinishNavigation after the back navigation completes
     } else {
         // Close the InAppBrowser
         [self close];
@@ -1646,11 +1639,8 @@ BOOL isExiting = FALSE;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     
-    // Track navigation state for close button
-    if (theWebView.canGoBack && !self.hasNavigatedFromInitialPage) {
-        self.hasNavigatedFromInitialPage = YES;
-        [self updateCloseButtonTitle];
-    }
+    // Update close button title based on current navigation state
+    [self updateCloseButtonTitle];
     
     NSLog(browserOptions.hidespinner ? @"Yes" : @"No");
     if(!browserOptions.hidespinner) {
@@ -1696,10 +1686,7 @@ BOOL isExiting = FALSE;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;
     
-    // Update navigation state and close button title
-    if (theWebView.canGoBack && !self.hasNavigatedFromInitialPage) {
-        self.hasNavigatedFromInitialPage = YES;
-    }
+    // Update close button title based on current navigation state
     [self updateCloseButtonTitle];
     
     [self.spinner stopAnimating];
