@@ -79,8 +79,7 @@
 @property (nonatomic, strong) UIView* modalContainer;
 @property (nonatomic, assign) BOOL isModalVisible;
 
-// Navigation state tracking
-@property (nonatomic, assign) BOOL hasNavigatedFromInitialPage;
+
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
 @property (nonatomic, weak) CDVWKInAppBrowser* navigationDelegate;
