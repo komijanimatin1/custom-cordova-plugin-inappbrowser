@@ -1847,8 +1847,8 @@ public class InAppBrowser extends CordovaPlugin {
                 
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
-                // Add top margin to avoid camera punch
-                webViewLayoutParams.setMargins(0, this.dpToPixels(24), 0, 0);
+                // Add top margin to avoid camera punch - increased for better clearance
+                webViewLayoutParams.setMargins(0, this.dpToPixels(48), 0, 0);
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
                 
