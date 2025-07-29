@@ -630,6 +630,13 @@ static CDVWKInAppBrowser* instance = nil;
 
 - (void)webView:(WKWebView*)theWebView didFailNavigation:(NSError*)error
 {
+    // Check if this is the modal WebView
+    if (theWebView == self.inAppBrowserViewController.modalWebView) {
+        // Handle modal WebView navigation error
+        NSLog(@"Modal WebView navigation error: %@", [error localizedDescription]);
+        return;
+    }
+    
     if (self.callbackId != nil) {
         NSString* url = [theWebView.URL absoluteString];
         if(url == nil){
@@ -703,6 +710,11 @@ BOOL isExiting = FALSE;
 
 -(void)dealloc {
     //NSLog(@"dealloc");
+    
+    // Clean up modal WebView
+    if (self.isModalVisible) {
+        [self hideModalWebView];
+    }
 }
 
 - (void)createViews
@@ -821,7 +833,11 @@ BOOL isExiting = FALSE;
     if (@available(iOS 11.0, *)) {
         self.webView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentAutomatic;
     } else {
+        // This is deprecated but needed for iOS 10 and below
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.automaticallyAdjustsScrollViewInsets = YES;
+        #pragma clang diagnostic pop
     }
     [self.webView setAutoresizingMask:UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth];
     self.webView.allowsLinkPreview = NO;
@@ -832,7 +848,11 @@ BOOL isExiting = FALSE;
     if (@available(iOS 13.0, *)) {
         self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
     } else {
+        // This is deprecated but needed for iOS 12 and below
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
         self.spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleGray];
+        #pragma clang diagnostic pop
     }
     self.spinner.alpha = 1.000;
     self.spinner.autoresizesSubviews = YES;
@@ -955,18 +975,14 @@ BOOL isExiting = FALSE;
 
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex
 {
-    // the advantage of using UIBarButtonSystemItemDone is the system will localize it for you automatically
-    // but, if you want to set this yourself, knock yourself out (we can't set the title for a system Done button, so we have to create a new one)
-    self.closeButton = nil;
-    // Initialize with title if title is set, otherwise the title will be 'Done' localized
-    self.closeButton = title != nil ? [[UIBarButtonItem alloc] initWithTitle:title style:UIBarButtonItemStylePlain target:self action:@selector(close)] : [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(close)];
-    self.closeButton.enabled = YES;
-    // If color on closebutton is requested then initialize with that that color, otherwise use initialize with default
-    self.closeButton.tintColor = colorString != nil ? [self colorFromHexString:colorString] : [UIColor colorWithRed:60.0 / 255.0 green:136.0 / 255.0 blue:230.0 / 255.0 alpha:1];
+    // Update the close button title and color for the footer implementation
+    if (title != nil) {
+        [self.closeButton setTitle:title forState:UIControlStateNormal];
+    }
     
-    NSMutableArray* items = [self.toolbar.items mutableCopy];
-    [items replaceObjectAtIndex:buttonIndex withObject:self.closeButton];
-    [self.toolbar setItems:items];
+    if (colorString != nil) {
+        [self.closeButton setTitleColor:[self colorFromHexString:colorString] forState:UIControlStateNormal];
+    }
 }
 
 - (void)showLocationBar:(BOOL)show
@@ -1105,9 +1121,16 @@ BOOL isExiting = FALSE;
 - (void)viewDidDisappear:(BOOL)animated
 {
     [super viewDidDisappear:animated];
+    
+    // Handle browser exit
     if (isExiting && (self.navigationDelegate != nil) && [self.navigationDelegate respondsToSelector:@selector(browserExit)]) {
         [self.navigationDelegate browserExit];
         isExiting = FALSE;
+    }
+    
+    // Ensure modal is hidden when view disappears
+    if (self.isModalVisible) {
+        [self hideModalWebView];
     }
 }
 
@@ -1134,6 +1157,11 @@ BOOL isExiting = FALSE;
 - (void)close
 {
     self.currentURL = nil;
+    
+    // Hide modal if it's visible
+    if (self.isModalVisible) {
+        [self hideModalWebView];
+    }
     
     __weak UIViewController* weakSelf = self;
     
@@ -1171,15 +1199,12 @@ BOOL isExiting = FALSE;
 
 - (void)injectScript
 {
-    // Use the same JavaScript code as Android version to get HTML content and show alert
-    NSString *jsCode = @"(function() { var html = document.body.innerHTML; var parts = []; for (var i = 0; i < 1; i++) { parts.push(html.substring(i * 1000, (i + 1) * 1000)); } alert('HTML Content: ' + parts[0]); return parts; })();";
-    [self.webView evaluateJavaScript:jsCode completionHandler:^(id result, NSError *error) {
-        if (error) {
-            NSLog(@"JavaScript error: %@", error);
-        } else {
-            [self.navigationDelegate sendEvent:@"inject" withData:result];
-        }
-    }];
+    // Toggle modal WebView instead of injecting JavaScript
+    if (self.isModalVisible) {
+        [self hideModalWebView];
+    } else {
+        [self showModalWebView];
+    }
 }
 
 - (void)buttonTouchDown:(UIButton *)sender {
@@ -1202,6 +1227,121 @@ BOOL isExiting = FALSE;
     }];
 }
 
+#pragma mark - Modal WebView Methods
+
+- (void)showModalWebView {
+    NSLog(@"showModalWebView called, isModalVisible: %@", self.isModalVisible ? @"YES" : @"NO");
+    
+    if (self.isModalVisible) {
+        return;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Create modal container (fullscreen overlay)
+        self.modalContainer = [[UIView alloc] initWithFrame:self.view.bounds];
+        self.modalContainer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.5]; // Semi-transparent background
+        
+        // Create modal WebView container with specific dimensions
+        UIView *modalWebViewContainer = [[UIView alloc] init];
+        
+        // Calculate 80% width and 60% height of screen
+        CGFloat screenWidth = self.view.bounds.size.width;
+        CGFloat screenHeight = self.view.bounds.size.height;
+        CGFloat modalWidth = screenWidth * 0.8; // 80% of screen width
+        CGFloat modalHeight = screenHeight * 0.6; // 60% of screen height
+        
+        // Center the modal
+        modalWebViewContainer.frame = CGRectMake(
+            (screenWidth - modalWidth) / 2,
+            (screenHeight - modalHeight) / 2,
+            modalWidth,
+            modalHeight
+        );
+        
+        // Add rounded corners and background to modal container
+        modalWebViewContainer.backgroundColor = [UIColor whiteColor];
+        modalWebViewContainer.layer.cornerRadius = 16.0; // 16pt border radius
+        modalWebViewContainer.layer.masksToBounds = YES;
+        modalWebViewContainer.clipsToBounds = YES;
+        
+        // Create modal WebView - NO PADDING, fill entire modal container
+        WKWebViewConfiguration *modalConfiguration = [[WKWebViewConfiguration alloc] init];
+        modalConfiguration.allowsInlineMediaPlayback = YES;
+        modalConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
+        
+        self.modalWebView = [[WKWebView alloc] initWithFrame:CGRectMake(0, 0, modalWidth, modalHeight) configuration:modalConfiguration];
+        
+        // Configure modal WebView settings
+        self.modalWebView.navigationDelegate = self;
+        self.modalWebView.backgroundColor = [UIColor whiteColor];
+        self.modalWebView.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        
+        // Set WebViewClient for modal
+        self.modalWebView.navigationDelegate = self;
+        
+        // Add close button OUTSIDE the modal - positioned at top-right corner outside modal container
+        UIButton *closeModalButton = [UIButton buttonWithType:UIButtonTypeCustom];
+        
+        // Calculate close button position OUTSIDE the modal WebView container (top-right corner)
+        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth - 5; // 5pt outside right edge of modal
+        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y - 10; // 10pt above top edge of modal
+        closeModalButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40); // 40pt × 40pt for better touch target
+        
+        // Create oval background for close button - NO WHITE BORDER
+        closeModalButton.backgroundColor = [UIColor colorWithHexString:@"#FF0000"]; // Red background
+        closeModalButton.layer.cornerRadius = 20.0; // Make it circular (half of 40pt)
+        closeModalButton.layer.masksToBounds = YES;
+        // Removed white border - no borderWidth or borderColor
+        
+        // Set close icon (X)
+        [closeModalButton setTitle:@"✕" forState:UIControlStateNormal];
+        [closeModalButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        closeModalButton.titleLabel.font = [UIFont systemFontOfSize:20.0]; // Larger font for better visibility
+        
+        [closeModalButton addTarget:self action:@selector(hideModalWebView) forControlEvents:UIControlEventTouchUpInside];
+        
+        // Debug: Log close button frame
+        NSLog(@"Close button frame: %@", NSStringFromCGRect(closeModalButton.frame));
+        NSLog(@"Close button target action: hideModalWebView");
+        
+        // Add WebView to modal WebView container
+        [modalWebViewContainer addSubview:self.modalWebView];
+        
+        // Add modal WebView container and close button to modal container
+        [self.modalContainer addSubview:modalWebViewContainer];
+        [self.modalContainer addSubview:closeModalButton];
+        
+        // Make sure close button is on top and accessible
+        [self.modalContainer bringSubviewToFront:closeModalButton];
+        
+        // Add modal container to the main view
+        [self.view addSubview:self.modalContainer];
+        [self.view bringSubviewToFront:self.modalContainer];
+        
+        // Load Google.com in modal WebView
+        [self.modalWebView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://google.com"]]];
+        
+        self.isModalVisible = YES;
+    });
+}
+
+- (void)hideModalWebView {
+    NSLog(@"hideModalWebView called, isModalVisible: %@", self.isModalVisible ? @"YES" : @"NO");
+    
+    if (!self.isModalVisible) {
+        return;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSLog(@"Removing modal from view");
+        [self.modalContainer removeFromSuperview];
+        self.modalContainer = nil;
+        self.modalWebView = nil;
+        self.isModalVisible = NO;
+        NSLog(@"Modal hidden successfully");
+    });
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     [self rePositionViews];
@@ -1209,14 +1349,30 @@ BOOL isExiting = FALSE;
     [super viewWillAppear:animated];
 }
 
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    
+    // Hide modal if it's visible when view disappears
+    if (self.isModalVisible) {
+        [self hideModalWebView];
+    }
+}
+
+
+
 - (float) getStatusBarOffset {
     if (@available(iOS 13.0, *)) {
-        UIWindowScene *windowScene = UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
+        UIWindowScene *windowScene = (UIWindowScene *)UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
         if ([windowScene isKindOfClass:[UIWindowScene class]]) {
             return windowScene.statusBarManager.statusBarFrame.size.height;
         }
     }
+    // This is deprecated but needed for iOS 12 and below
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     return (float) [[UIApplication sharedApplication] statusBarFrame].size.height;
+    #pragma clang diagnostic pop
 }
 
 - (void) rePositionViews {
@@ -1319,6 +1475,12 @@ BOOL isExiting = FALSE;
 
 - (void)webView:(WKWebView *)theWebView didStartProvisionalNavigation:(WKNavigation *)navigation{
     
+    // Check if this is the modal WebView
+    if (theWebView == self.modalWebView) {
+        // Handle modal WebView navigation
+        return;
+    }
+    
     // loading url, start spinner, update back/forward
     
     self.addressLabel.text = NSLocalizedString(@"Loading...", nil);
@@ -1335,6 +1497,13 @@ BOOL isExiting = FALSE;
 
 - (void)webView:(WKWebView *)theWebView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler
 {
+    // Check if this is the modal WebView
+    if (theWebView == self.modalWebView) {
+        // Allow all navigation in modal WebView
+        decisionHandler(WKNavigationActionPolicyAllow);
+        return;
+    }
+    
     NSURL *url = navigationAction.request.URL;
     NSURL *mainDocumentURL = navigationAction.request.mainDocumentURL;
     
@@ -1349,6 +1518,12 @@ BOOL isExiting = FALSE;
 
 - (void)webView:(WKWebView *)theWebView didFinishNavigation:(WKNavigation *)navigation
 {
+    // Check if this is the modal WebView
+    if (theWebView == self.modalWebView) {
+        // Handle modal WebView navigation completion
+        return;
+    }
+    
     // update url, stop spinner, update back/forward
     
     self.addressLabel.text = [self.currentURL absoluteString];
@@ -1362,6 +1537,13 @@ BOOL isExiting = FALSE;
 }
     
 - (void)webView:(WKWebView*)theWebView failedNavigation:(NSString*) delegateName withError:(nonnull NSError *)error{
+    // Check if this is the modal WebView
+    if (theWebView == self.modalWebView) {
+        // Handle modal WebView navigation error
+        NSLog(@"Modal WebView navigation error: %@", [error localizedDescription]);
+        return;
+    }
+    
     // log fail message, stop spinner, update back/forward
     NSLog(@"webView:%@ - %ld: %@", delegateName, (long)error.code, [error localizedDescription]);
     
@@ -1417,6 +1599,36 @@ BOOL isExiting = FALSE;
     [coordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context)
     {
         [self rePositionViews];
+        
+        // Reposition modal if it's visible
+        if (self.isModalVisible && self.modalContainer) {
+            // Update modal container frame
+            self.modalContainer.frame = CGRectMake(0, 0, size.width, size.height);
+            
+            // Find and update modal WebView container
+            for (UIView *subview in self.modalContainer.subviews) {
+                if (subview != self.modalContainer.subviews.lastObject) { // Not the close button
+                    // Recalculate modal dimensions
+                    CGFloat modalWidth = size.width * 0.8;
+                    CGFloat modalHeight = size.height * 0.6;
+                    
+                    subview.frame = CGRectMake(
+                        (size.width - modalWidth) / 2,
+                        (size.height - modalHeight) / 2,
+                        modalWidth,
+                        modalHeight
+                    );
+                    
+                    // Update close button position
+                    UIButton *closeButton = self.modalContainer.subviews.lastObject;
+                    if ([closeButton isKindOfClass:[UIButton class]]) {
+                        CGFloat closeButtonX = (size.width - modalWidth) / 2 + modalWidth - 50; // 10pt from right edge of modal
+                        CGFloat closeButtonY = (size.height - modalHeight) / 2 + 10; // 10pt from top edge of modal
+                        closeButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40);
+                    }
+                }
+            }
+        }
     } completion:^(id<UIViewControllerTransitionCoordinatorContext> context)
     {
 

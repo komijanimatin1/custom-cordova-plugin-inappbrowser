@@ -69,6 +69,11 @@
 @property (nonatomic, strong) IBOutlet UILabel* footerTitleLabel;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 
+// Modal WebView for AI functionality
+@property (nonatomic, strong) WKWebView* modalWebView;
+@property (nonatomic, strong) UIView* modalContainer;
+@property (nonatomic, assign) BOOL isModalVisible;
+
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
 @property (nonatomic, weak) CDVWKInAppBrowser* navigationDelegate;
 @property (nonatomic) NSURL* currentURL;
@@ -78,6 +83,10 @@
 - (void)showLocationBar:(BOOL)show;
 - (void)showToolBar:(BOOL)show : (NSString *) toolbarPosition;
 - (void)setCloseButtonTitle:(NSString*)title : (NSString*) colorString : (int) buttonIndex;
+
+// Modal WebView methods
+- (void)showModalWebView;
+- (void)hideModalWebView;
 
 - (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary*) settings;
 
