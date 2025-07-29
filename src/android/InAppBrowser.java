@@ -1356,28 +1356,24 @@ public class InAppBrowser extends CordovaPlugin {
                 dialog.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 
-                // Set fullscreen flags before showing the dialog
+                // Set soft fullscreen mode - full screen but keep system UI visible
                 if (fullscreen) {
+                    // Remove fullscreen flags to keep system UI visible
+                    dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    
+                    // Set flags for proper layout
                     dialog.getWindow().setFlags(
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN | 
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS,
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN | 
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
                     );
                     
-                    // For Android 5.0+ (API 21+), also set system UI visibility
+                    // For Android 5.0+ (API 21+), set system UI visibility to keep bars visible
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                         dialog.getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         );
                     }
                 }
@@ -1874,15 +1870,11 @@ public class InAppBrowser extends CordovaPlugin {
                     dialog.show();
                     dialog.getWindow().setAttributes(lp);
                     
-                    // Ensure fullscreen is maintained after showing
+                    // Ensure soft fullscreen is maintained after showing
                     if (fullscreen) {
                         dialog.getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         );
                     }
                 }
