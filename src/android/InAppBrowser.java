@@ -164,6 +164,10 @@ public class InAppBrowser extends CordovaPlugin {
     private WebView modalWebView;
     private RelativeLayout modalContainer;
     private boolean isModalVisible = false;
+    
+    // Menu modal for three-dot menu
+    private RelativeLayout menuModalContainer;
+    private boolean isMenuModalVisible = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -365,6 +369,9 @@ public class InAppBrowser extends CordovaPlugin {
         if (isModalVisible) {
             hideModalWebView();
         }
+        if (isMenuModalVisible) {
+            hideMenuModal();
+        }
         closeDialog();
     }
 
@@ -378,6 +385,10 @@ public class InAppBrowser extends CordovaPlugin {
         }
         if (isModalVisible && modalWebView != null) {
             modalWebView.onPause();
+        }
+        // Hide menu modal when app is paused
+        if (isMenuModalVisible) {
+            hideMenuModal();
         }
     }
 
@@ -401,6 +412,9 @@ public class InAppBrowser extends CordovaPlugin {
     public void onDestroy() {
         if (isModalVisible) {
             hideModalWebView();
+        }
+        if (isMenuModalVisible) {
+            hideMenuModal();
         }
         closeDialog();
     }
@@ -553,6 +567,11 @@ public class InAppBrowser extends CordovaPlugin {
                 // Hide modal if it's visible
                 if (isModalVisible) {
                     hideModalWebView();
+                }
+                
+                // Hide menu modal if it's visible
+                if (isMenuModalVisible) {
+                    hideMenuModal();
                 }
                 
                 final WebView childView = inAppWebView;
@@ -769,6 +788,168 @@ public class InAppBrowser extends CordovaPlugin {
                 modalContainer = null;
                 modalWebView = null;
                 isModalVisible = false;
+            }
+        });
+    }
+
+    /**
+     * Show menu modal for three-dot menu
+     */
+    private void showMenuModal() {
+        if (isMenuModalVisible || dialog == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Create menu modal container
+                menuModalContainer = new RelativeLayout(cordova.getActivity());
+                menuModalContainer.setBackgroundColor(Color.parseColor("#80000000")); // Semi-transparent background
+                
+                // Set layout parameters for menu modal container
+                RelativeLayout.LayoutParams menuModalContainerParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                );
+                menuModalContainer.setLayoutParams(menuModalContainerParams);
+                
+                // Create menu container with specific dimensions
+                LinearLayout menuContainer = new LinearLayout(cordova.getActivity());
+                menuContainer.setOrientation(LinearLayout.VERTICAL);
+                
+                // Calculate menu size (positioned above footer)
+                int screenWidth = cordova.getActivity().getResources().getDisplayMetrics().widthPixels;
+                int menuWidth = (int) (screenWidth * 0.6); // 60% of screen width
+                int menuHeight = LayoutParams.WRAP_CONTENT;
+                
+                // Set layout parameters for menu container
+                RelativeLayout.LayoutParams menuContainerParams = new RelativeLayout.LayoutParams(
+                    menuWidth,
+                    menuHeight
+                );
+                // Position above footer (bottom-right area)
+                menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                menuContainerParams.setMargins(0, 0, dpToPixels(16), dpToPixels(TOOLBAR_HEIGHT + 32)); // Above footer
+                menuContainer.setLayoutParams(menuContainerParams);
+                
+                // Add rounded corners and background to menu container
+                android.graphics.drawable.GradientDrawable menuBackground = new android.graphics.drawable.GradientDrawable();
+                menuBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                menuBackground.setCornerRadius(dpToPixels(12)); // Rounded corners
+                menuBackground.setColor(Color.WHITE); // White background
+                menuContainer.setBackground(menuBackground);
+                
+                // Add shadow effect
+                menuContainer.setElevation(dpToPixels(8));
+                
+                // Add padding to menu container
+                menuContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+                
+                // Create menu items
+                String[] menuItems = {"Share", "Bookmark", "Settings", "About"};
+                for (String item : menuItems) {
+                    TextView menuItem = new TextView(cordova.getActivity());
+                    menuItem.setText(item);
+                    menuItem.setTextColor(Color.BLACK);
+                    menuItem.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                    menuItem.setPadding(dpToPixels(16), dpToPixels(12), dpToPixels(16), dpToPixels(12));
+                    menuItem.setGravity(Gravity.CENTER_VERTICAL);
+                    
+                    // Add click effect
+                    menuItem.setBackgroundResource(android.R.drawable.list_selector_background);
+                    
+                    // Add click listener
+                    menuItem.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Handle menu item click
+                            String clickedItem = ((TextView) v).getText().toString();
+                            handleMenuItemClick(clickedItem);
+                            hideMenuModal();
+                        }
+                    });
+                    
+                    menuContainer.addView(menuItem);
+                    
+                    // Add separator (except for last item)
+                    if (!item.equals(menuItems[menuItems.length - 1])) {
+                        View separator = new View(cordova.getActivity());
+                        separator.setBackgroundColor(Color.parseColor("#E0E0E0"));
+                        LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
+                            LayoutParams.MATCH_PARENT,
+                            1
+                        );
+                        separator.setLayoutParams(separatorParams);
+                        menuContainer.addView(separator);
+                    }
+                }
+                
+                // Add menu container to modal container
+                menuModalContainer.addView(menuContainer);
+                
+                // Add click listener to background to close menu
+                menuModalContainer.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hideMenuModal();
+                    }
+                });
+                
+                // Add modal container to the main dialog
+                if (dialog.getWindow() != null && dialog.getWindow().getDecorView() != null) {
+                    View decorView = dialog.getWindow().getDecorView();
+                    if (decorView instanceof ViewGroup) {
+                        ((ViewGroup) decorView).addView(menuModalContainer);
+                    }
+                }
+                
+                isMenuModalVisible = true;
+            }
+        });
+    }
+
+    /**
+     * Handle menu item click
+     */
+    private void handleMenuItemClick(String item) {
+        // You can implement specific actions for each menu item here
+        LOG.d(LOG_TAG, "Menu item clicked: " + item);
+        
+        // For now, just log the action
+        switch (item) {
+            case "Share":
+                // Implement share functionality
+                break;
+            case "Bookmark":
+                // Implement bookmark functionality
+                break;
+            case "Settings":
+                // Implement settings functionality
+                break;
+            case "About":
+                // Implement about functionality
+                break;
+        }
+    }
+
+    /**
+     * Hide menu modal
+     */
+    private void hideMenuModal() {
+        if (!isMenuModalVisible || menuModalContainer == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (menuModalContainer.getParent() != null) {
+                    ((ViewGroup) menuModalContainer.getParent()).removeView(menuModalContainer);
+                }
+                menuModalContainer = null;
+                isMenuModalVisible = false;
             }
         });
     }
@@ -1323,6 +1504,77 @@ public class InAppBrowser extends CordovaPlugin {
                     });
 
                     footerContent.addView(injectButton);
+                    
+                    // Add three-dot menu button
+                    ImageButton menuButton = new ImageButton(cordova.getActivity());
+                    menuButton.setContentDescription("Menu Button");
+                    
+                    // Get the three-dot icon from drawable resources
+                    Resources activityRes = cordova.getActivity().getResources();
+                    int menuIconResId = activityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                    if (menuIconResId == 0) {
+                        // Fallback to system icon if custom icon not found
+                        menuIconResId = android.R.drawable.ic_menu_more;
+                    }
+                    Drawable menuIcon = activityRes.getDrawable(menuIconResId);
+                    menuButton.setImageDrawable(menuIcon);
+                    menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    menuButton.getAdjustViewBounds();
+                    
+                    // Set button color
+                    menuButton.setColorFilter(Color.WHITE);
+                    
+                    // Add padding
+                    menuButton.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    
+                    // Add gray background with border radius
+                    android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
+                    menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    menuButtonShape.setCornerRadius(this.dpToPixels(8));
+                    menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
+                    menuButton.setBackground(menuButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    menuButton.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    menuButtonShape.setColor(Color.parseColor("#444444"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    menuButtonShape.setColor(Color.parseColor("#666666"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
+
+                    LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    menuButtonLayout.weight = 1; // Like flex: 1
+                    menuButtonLayout.gravity = Gravity.CENTER;
+                    menuButton.setLayoutParams(menuButtonLayout);
+
+                    // Add click listener to show menu modal
+                    menuButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Toggle menu modal
+                            if (isMenuModalVisible) {
+                                hideMenuModal();
+                            } else {
+                                showMenuModal();
+                            }
+                        }
+                    });
+
+                    footerContent.addView(menuButton);
                 }
 
                 // Add title in center
