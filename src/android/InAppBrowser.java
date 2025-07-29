@@ -123,6 +123,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FULLSCREEN = "fullscreen";
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
+    private static final String MENU_BUTTON = "menu";
 
     private static final int TOOLBAR_HEIGHT = 120;
 
@@ -157,6 +158,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean fullscreen = true;
        private boolean showInjectButton = false;
     private String injectJsCode = "";
+    private boolean showMenuButton = false;
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
     
@@ -848,7 +850,7 @@ public class InAppBrowser extends CordovaPlugin {
                 menuContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
                 
                 // Create menu items
-                String[] menuItems = {"Share", "Bookmark", "Settings", "About"};
+                String[] menuItems = {"Share", "Bookmark", "Settings", "Refresh", "About"};
                 for (String item : menuItems) {
                     TextView menuItem = new TextView(cordova.getActivity());
                     menuItem.setText(item);
@@ -927,6 +929,12 @@ public class InAppBrowser extends CordovaPlugin {
                 break;
             case "Settings":
                 // Implement settings functionality
+                break;
+            case "Refresh":
+                // Refresh the WebView
+                if (inAppWebView != null) {
+                    inAppWebView.reload();
+                }
                 break;
             case "About":
                 // Implement about functionality
@@ -1037,7 +1045,11 @@ public class InAppBrowser extends CordovaPlugin {
                 textView.getContentDescription() != null && 
                 textView.getContentDescription().toString().equals("Close Button")) {
                 
-                String newText = (inAppWebView != null && inAppWebView.canGoBack()) ? "Back" : "Close";
+                // Only show "Back" if we can actually go back and we're not on the initial page
+                String newText = "Close";
+                if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
+                    newText = "Back";
+                }
                 textView.setText(newText);
             }
         }
@@ -1148,6 +1160,10 @@ public class InAppBrowser extends CordovaPlugin {
             if (injectJsCodeSet != null) {
                 injectJsCode = injectJsCodeSet;
             }
+            String menuButtonSet = features.get(MENU_BUTTON);
+            if (menuButtonSet != null) {
+                showMenuButton = menuButtonSet.equals("yes") ? true : false;
+            }
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -1173,7 +1189,8 @@ public class InAppBrowser extends CordovaPlugin {
                 Resources activityRes = cordova.getActivity().getResources();
 
                 // Determine button text based on whether we can go back
-                String buttonText = (inAppWebView != null && inAppWebView.canGoBack()) ? "Back" : "Close";
+                // Initially show "Close", then check if we can go back after page loads
+                String buttonText = "Close";
 
                 if (closeButtonCaption != "") {
                     // Use TextView for text
@@ -1263,8 +1280,8 @@ public class InAppBrowser extends CordovaPlugin {
                 _close.setId(Integer.valueOf(id));
                 _close.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        // Check if we can go back in the WebView
-                        if (inAppWebView != null && inAppWebView.canGoBack()) {
+                        // Check if we can go back in the WebView and we're not on the initial page
+                        if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
                             // If we can go back, go back instead of closing
                             inAppWebView.goBack();
                             // Update button text after navigation
@@ -1505,76 +1522,87 @@ public class InAppBrowser extends CordovaPlugin {
 
                     footerContent.addView(injectButton);
                     
-                    // Add three-dot menu button
-                    ImageButton menuButton = new ImageButton(cordova.getActivity());
-                    menuButton.setContentDescription("Menu Button");
-                    
-                    // Get the three-dot icon from drawable resources
-                    Resources menuActivityRes = cordova.getActivity().getResources();
-                    int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
-                    if (menuIconResId == 0) {
-                        // Fallback to system icon if custom icon not found
-                        menuIconResId = android.R.drawable.ic_menu_more;
-                    }
-                    Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
-                    menuButton.setImageDrawable(menuIcon);
-                    menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                    menuButton.getAdjustViewBounds();
-                    
-                    // Set button color
-                    menuButton.setColorFilter(Color.WHITE);
-                    
-                    // Add padding
-                    menuButton.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
-                    
-                    // Add gray background with border radius
-                    android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
-                    menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                    menuButtonShape.setCornerRadius(this.dpToPixels(8));
-                    menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
-                    menuButton.setBackground(menuButtonShape);
-                    
-                    // Add click effect (darker on press)
-                    menuButton.setOnTouchListener(new View.OnTouchListener() {
-                        @Override
-                        public boolean onTouch(View v, android.view.MotionEvent event) {
-                            switch (event.getAction()) {
-                                case android.view.MotionEvent.ACTION_DOWN:
-                                    // Darker color on press
-                                    menuButtonShape.setColor(Color.parseColor("#444444"));
-                                    break;
-                                case android.view.MotionEvent.ACTION_UP:
-                                case android.view.MotionEvent.ACTION_CANCEL:
-                                    // Original color on release
-                                    menuButtonShape.setColor(Color.parseColor("#666666"));
-                                    break;
-                            }
-                            return false; // Let the click listener handle the click
-                        }
-                    });
-
-                    LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
-                        LayoutParams.WRAP_CONTENT,
+                    // Add space between AI button and menu button
+                    View spacer = new View(cordova.getActivity());
+                    LinearLayout.LayoutParams spacerLayout = new LinearLayout.LayoutParams(
+                        this.dpToPixels(8), // 8dp width for spacing
                         LayoutParams.WRAP_CONTENT
                     );
-                    menuButtonLayout.weight = 1; // Like flex: 1
-                    menuButtonLayout.gravity = Gravity.CENTER;
-                    menuButton.setLayoutParams(menuButtonLayout);
-
-                    // Add click listener to show menu modal
-                    menuButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            // Toggle menu modal
-                            if (isMenuModalVisible) {
-                                hideMenuModal();
-                            } else {
-                                showMenuModal();
-                            }
+                    spacer.setLayoutParams(spacerLayout);
+                    footerContent.addView(spacer);
+                    
+                    // Add three-dot menu button (only if menu=yes)
+                    if (showMenuButton) {
+                        ImageButton menuButton = new ImageButton(cordova.getActivity());
+                        menuButton.setContentDescription("Menu Button");
+                        
+                        // Get the three-dot icon from drawable resources
+                        Resources menuActivityRes = cordova.getActivity().getResources();
+                        int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                        if (menuIconResId == 0) {
+                            // Fallback to system icon if custom icon not found
+                            menuIconResId = android.R.drawable.ic_menu_more;
                         }
-                    });
+                        Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
+                        menuButton.setImageDrawable(menuIcon);
+                        menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        menuButton.getAdjustViewBounds();
+                        
+                        // Set button color
+                        menuButton.setColorFilter(Color.WHITE);
+                        
+                        // Add padding (reduced for smaller width)
+                        menuButton.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
+                        
+                        // Add gray background with border radius
+                        android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
+                        menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                        menuButtonShape.setCornerRadius(this.dpToPixels(8));
+                        menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
+                        menuButton.setBackground(menuButtonShape);
+                        
+                        // Add click effect (darker on press)
+                        menuButton.setOnTouchListener(new View.OnTouchListener() {
+                            @Override
+                            public boolean onTouch(View v, android.view.MotionEvent event) {
+                                switch (event.getAction()) {
+                                    case android.view.MotionEvent.ACTION_DOWN:
+                                        // Darker color on press
+                                        menuButtonShape.setColor(Color.parseColor("#444444"));
+                                        break;
+                                    case android.view.MotionEvent.ACTION_UP:
+                                    case android.view.MotionEvent.ACTION_CANCEL:
+                                        // Original color on release
+                                        menuButtonShape.setColor(Color.parseColor("#666666"));
+                                        break;
+                                }
+                                return false; // Let the click listener handle the click
+                            }
+                        });
 
-                    footerContent.addView(menuButton);
+                        LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
+                            LayoutParams.WRAP_CONTENT,
+                            LayoutParams.WRAP_CONTENT
+                        );
+                        menuButtonLayout.weight = 0; // No weight - fixed width
+                        menuButtonLayout.gravity = Gravity.CENTER;
+                        menuButton.setLayoutParams(menuButtonLayout);
+
+                        // Add click listener to show menu modal
+                        menuButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // Toggle menu modal
+                                if (isMenuModalVisible) {
+                                    hideMenuModal();
+                                } else {
+                                    showMenuModal();
+                                }
+                            }
+                        });
+
+                        footerContent.addView(menuButton);
+                    }
                 }
 
                 // Add title in center
@@ -1776,6 +1804,8 @@ public class InAppBrowser extends CordovaPlugin {
                 
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
+                // Add top margin to avoid camera punch
+                webViewLayoutParams.setMargins(0, this.dpToPixels(24), 0, 0);
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
                 
