@@ -959,7 +959,7 @@ BOOL isExiting = FALSE;
     self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
     self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
     [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
-    [self.closeButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
+    [self.closeButton addTarget:self action:@selector(closeOrGoBack) forControlEvents:UIControlEventTouchUpInside];
     [self.closeButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
     [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.closeButton];
@@ -1440,8 +1440,7 @@ BOOL isExiting = FALSE;
 - (void)goForward {
     if (self.webView.canGoForward) {
         [self.webView goForward];
-        self.hasNavigatedFromInitialPage = YES;
-        [self updateCloseButtonTitle];
+        // Navigation state will be updated in didFinishNavigation
     }
     [self hideMenu];
 }
@@ -1452,10 +1451,30 @@ BOOL isExiting = FALSE;
 }
 
 - (void)updateCloseButtonTitle {
-    if (self.hasNavigatedFromInitialPage) {
+    if (self.hasNavigatedFromInitialPage && self.webView.canGoBack) {
         [self.closeButton setTitle:@"Back" forState:UIControlStateNormal];
     } else {
         [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+    }
+}
+
+- (void)closeOrGoBack {
+    // Check if we can go back and we have navigated from the initial page
+    if (self.hasNavigatedFromInitialPage && self.webView.canGoBack) {
+        // Go back in WebView history
+        [self.webView goBack];
+        
+        // Update navigation state after going back
+        dispatch_async(dispatch_get_main_queue(), ^{
+            // Check if we're back to the initial page
+            if (!self.webView.canGoBack) {
+                self.hasNavigatedFromInitialPage = NO;
+            }
+            [self updateCloseButtonTitle];
+        });
+    } else {
+        // Close the InAppBrowser
+        [self close];
     }
 }
 
@@ -1628,7 +1647,7 @@ BOOL isExiting = FALSE;
     self.forwardButton.enabled = theWebView.canGoForward;
     
     // Track navigation state for close button
-    if (theWebView.canGoBack) {
+    if (theWebView.canGoBack && !self.hasNavigatedFromInitialPage) {
         self.hasNavigatedFromInitialPage = YES;
         [self updateCloseButtonTitle];
     }
@@ -1677,7 +1696,10 @@ BOOL isExiting = FALSE;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;
     
-    // Update close button title based on navigation state
+    // Update navigation state and close button title
+    if (theWebView.canGoBack && !self.hasNavigatedFromInitialPage) {
+        self.hasNavigatedFromInitialPage = YES;
+    }
     [self updateCloseButtonTitle];
     
     [self.spinner stopAnimating];
