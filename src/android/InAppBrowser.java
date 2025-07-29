@@ -672,8 +672,8 @@ public class InAppBrowser extends CordovaPlugin {
                 modalBackground.setColor(Color.WHITE); // White background
                 modalWebViewContainer.setBackground(modalBackground);
                 
-                // Add padding to modal container
-                modalWebViewContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+                // Remove padding to eliminate white area around WebView
+                modalWebViewContainer.setPadding(0, 0, 0, 0);
                 
                 // Create modal WebView
                 modalWebView = new WebView(cordova.getActivity());
@@ -710,46 +710,41 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
                 
-                // Add close button to modal
-                ImageButton closeModalButton = new ImageButton(cordova.getActivity());
-                closeModalButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-                closeModalButton.setColorFilter(Color.WHITE);
+                // Add WebView to modal WebView container
+                modalWebViewContainer.addView(modalWebView);
                 
-                // Create oval background for close button
-                android.graphics.drawable.GradientDrawable closeButtonBackground = new android.graphics.drawable.GradientDrawable();
-                closeButtonBackground.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-                closeButtonBackground.setColor(Color.parseColor("#FF0000")); // Red background
-                closeButtonBackground.setStroke(dpToPixels(1), Color.WHITE); // White border
-                closeModalButton.setBackground(closeButtonBackground);
+                // Add modal WebView container to modal container
+                modalContainer.addView(modalWebViewContainer);
                 
-                RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
-                    dpToPixels(32),
-                    dpToPixels(32)
-                );
-                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                closeButtonParams.setMargins(0, dpToPixels(8), dpToPixels(8), 0); // Position inside the modal, top-right corner
-                closeModalButton.setLayoutParams(closeButtonParams);
-                
-                closeModalButton.setOnClickListener(new View.OnClickListener() {
+                // Add click listener to background to close modal when clicking outside
+                modalContainer.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         hideModalWebView();
                     }
                 });
                 
-                // Add WebView to modal WebView container
-                modalWebViewContainer.addView(modalWebView);
-                
-                // Add modal WebView container and close button to modal container
-                modalContainer.addView(modalWebViewContainer);
-                modalContainer.addView(closeModalButton);
+                // Prevent clicks on the modal WebView container from closing the modal
+                modalWebViewContainer.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // Do nothing - prevent event from bubbling up to modalContainer
+                    }
+                });
                 
                 // Add modal container to the main dialog
                 if (dialog.getWindow() != null && dialog.getWindow().getDecorView() != null) {
                     View decorView = dialog.getWindow().getDecorView();
                     if (decorView instanceof ViewGroup) {
                         ((ViewGroup) decorView).addView(modalContainer);
+                        
+                        // Disable interaction with background elements when modal is open
+                        if (inAppWebView != null) {
+                            inAppWebView.setEnabled(false);
+                        }
+                        
+                        // Disable footer buttons when modal is open
+                        disableFooterInteraction();
                     }
                 }
                 
@@ -790,6 +785,14 @@ public class InAppBrowser extends CordovaPlugin {
                 modalContainer = null;
                 modalWebView = null;
                 isModalVisible = false;
+                
+                // Re-enable interaction with background elements when modal is closed
+                if (inAppWebView != null) {
+                    inAppWebView.setEnabled(true);
+                }
+                
+                // Re-enable footer buttons when modal is closed
+                enableFooterInteraction();
             }
         });
     }
@@ -960,6 +963,56 @@ public class InAppBrowser extends CordovaPlugin {
                 isMenuModalVisible = false;
             }
         });
+    }
+
+    /**
+     * Disable footer interaction when modal is open
+     */
+    private void disableFooterInteraction() {
+        if (dialog != null && dialog.getWindow() != null) {
+            View decorView = dialog.getWindow().getDecorView();
+            disableFooterInteractionRecursively(decorView, true);
+        }
+    }
+
+    /**
+     * Enable footer interaction when modal is closed
+     */
+    private void enableFooterInteraction() {
+        if (dialog != null && dialog.getWindow() != null) {
+            View decorView = dialog.getWindow().getDecorView();
+            disableFooterInteractionRecursively(decorView, false);
+        }
+    }
+
+    /**
+     * Recursively disable/enable footer interaction
+     */
+    private void disableFooterInteractionRecursively(View view, boolean disable) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                disableFooterInteractionRecursively(viewGroup.getChildAt(i), disable);
+            }
+        } else if (view instanceof Button || view instanceof ImageButton || view instanceof TextView) {
+            // Check if this is a footer button by looking at its text, ID, or content description
+            String text = "";
+            String contentDesc = "";
+            
+            if (view instanceof TextView) {
+                text = ((TextView) view).getText().toString();
+            }
+            if (view.getContentDescription() != null) {
+                contentDesc = view.getContentDescription().toString();
+            }
+            
+            // Disable/enable footer buttons (AI button, menu button, close button)
+            if (text.equals("AI") || text.equals("Close") || text.equals("Back") || 
+                contentDesc.equals("Menu Button") || contentDesc.equals("Close Button")) {
+                view.setEnabled(!disable);
+                view.setClickable(!disable);
+            }
+        }
     }
 
 
