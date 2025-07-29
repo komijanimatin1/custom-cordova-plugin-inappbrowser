@@ -852,8 +852,8 @@ public class InAppBrowser extends CordovaPlugin {
                 // Add padding to menu container
                 menuContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
                 
-                // Create menu items
-                String[] menuItems = {"Share", "Bookmark", "Settings", "Refresh", "About"};
+                // Create menu items - Forward and Refresh
+                String[] menuItems = {"Forward", "Refresh"};
                 for (String item : menuItems) {
                     TextView menuItem = new TextView(cordova.getActivity());
                     menuItem.setText(item);
@@ -922,25 +922,19 @@ public class InAppBrowser extends CordovaPlugin {
         // You can implement specific actions for each menu item here
         LOG.d(LOG_TAG, "Menu item clicked: " + item);
         
-        // For now, just log the action
+        // Handle menu item actions
         switch (item) {
-            case "Share":
-                // Implement share functionality
-                break;
-            case "Bookmark":
-                // Implement bookmark functionality
-                break;
-            case "Settings":
-                // Implement settings functionality
+            case "Forward":
+                // Navigate forward in WebView
+                if (inAppWebView != null && inAppWebView.canGoForward()) {
+                    inAppWebView.goForward();
+                }
                 break;
             case "Refresh":
                 // Refresh the WebView
                 if (inAppWebView != null) {
                     inAppWebView.reload();
                 }
-                break;
-            case "About":
-                // Implement about functionality
                 break;
         }
     }
