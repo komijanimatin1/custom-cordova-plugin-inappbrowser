@@ -824,6 +824,45 @@ public class InAppBrowser extends CordovaPlugin {
     }
 
     /**
+     * Update close button text based on navigation state
+     */
+    private void updateCloseButtonText() {
+        if (dialog != null && dialog.getWindow() != null) {
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // Find close buttons in the dialog and update their text
+                    View decorView = dialog.getWindow().getDecorView();
+                    updateButtonTextRecursively(decorView);
+                }
+            });
+        }
+    }
+
+    /**
+     * Recursively find and update close button text
+     */
+    private void updateButtonTextRecursively(View view) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                updateButtonTextRecursively(viewGroup.getChildAt(i));
+            }
+        } else if (view instanceof TextView) {
+            TextView textView = (TextView) view;
+            // Check if this is a close button by looking at its text or ID
+            if (textView.getText().toString().equals("Back") || 
+                textView.getText().toString().equals("Close") ||
+                textView.getContentDescription() != null && 
+                textView.getContentDescription().toString().equals("Close Button")) {
+                
+                String newText = (inAppWebView != null && inAppWebView.canGoBack()) ? "Back" : "Close";
+                textView.setText(newText);
+            }
+        }
+    }
+
+    /**
      * Display a new browser with the specified URL.
      *
      * @param url the url to load.
@@ -952,10 +991,13 @@ public class InAppBrowser extends CordovaPlugin {
                 View _close;
                 Resources activityRes = cordova.getActivity().getResources();
 
+                // Determine button text based on whether we can go back
+                String buttonText = (inAppWebView != null && inAppWebView.canGoBack()) ? "Back" : "Close";
+
                 if (closeButtonCaption != "") {
                     // Use TextView for text
                     TextView close = new TextView(cordova.getActivity());
-                    close.setText(closeButtonCaption);
+                    close.setText(buttonText);
                     close.setTextSize(20);
                     if (closeButtonColor != "") close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
                     close.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -1040,7 +1082,16 @@ public class InAppBrowser extends CordovaPlugin {
                 _close.setId(Integer.valueOf(id));
                 _close.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        closeDialog();
+                        // Check if we can go back in the WebView
+                        if (inAppWebView != null && inAppWebView.canGoBack()) {
+                            // If we can go back, go back instead of closing
+                            inAppWebView.goBack();
+                            // Update button text after navigation
+                            updateCloseButtonText();
+                        } else {
+                            // If we can't go back (we're on the first page), close the dialog
+                            closeDialog();
+                        }
                     }
                 });
 
@@ -1293,7 +1344,7 @@ public class InAppBrowser extends CordovaPlugin {
                     footerContent.addView(footerText);
                 }
 
-                // Add close button
+                // Add close button with back/close functionality
                 View footerClose = createCloseButton(7);
                 LinearLayout.LayoutParams closeButtonLayout = new LinearLayout.LayoutParams(
                     LayoutParams.WRAP_CONTENT,
@@ -1823,6 +1874,9 @@ public class InAppBrowser extends CordovaPlugin {
             // https://issues.apache.org/jira/browse/CB-11248
             view.clearFocus();
             view.requestFocus();
+
+            // Update close button text based on navigation state
+            updateCloseButtonText();
 
             try {
                 JSONObject obj = new JSONObject();
