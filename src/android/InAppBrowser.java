@@ -1510,13 +1510,13 @@ public class InAppBrowser extends CordovaPlugin {
                     menuButton.setContentDescription("Menu Button");
                     
                     // Get the three-dot icon from drawable resources
-                    Resources activityRes = cordova.getActivity().getResources();
-                    int menuIconResId = activityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                    Resources menuActivityRes = cordova.getActivity().getResources();
+                    int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
                     if (menuIconResId == 0) {
                         // Fallback to system icon if custom icon not found
                         menuIconResId = android.R.drawable.ic_menu_more;
                     }
-                    Drawable menuIcon = activityRes.getDrawable(menuIconResId);
+                    Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
                     menuButton.setImageDrawable(menuIcon);
                     menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     menuButton.getAdjustViewBounds();
