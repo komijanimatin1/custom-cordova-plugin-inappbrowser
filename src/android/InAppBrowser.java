@@ -1252,7 +1252,7 @@ public class InAppBrowser extends CordovaPlugin {
                     android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
                     closeButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                     closeButtonShape.setCornerRadius(this.dpToPixels(8));
-                    closeButtonShape.setColor(Color.parseColor("#E0E0E0")); // Light gray background
+                    closeButtonShape.setColor(Color.parseColor("#F0F0F0")); // Light gray background
                     close.setBackground(closeButtonShape);
                     
                     // Add click effect (darker on press)
@@ -1262,12 +1262,12 @@ public class InAppBrowser extends CordovaPlugin {
                             switch (event.getAction()) {
                                 case android.view.MotionEvent.ACTION_DOWN:
                                     // Darker color on press
-                                    closeButtonShape.setColor(Color.parseColor("#BDBDBD"));
+                                    closeButtonShape.setColor(Color.parseColor("#D0D0D0"));
                                     break;
                                 case android.view.MotionEvent.ACTION_UP:
                                 case android.view.MotionEvent.ACTION_CANCEL:
                                     // Original color on release
-                                    closeButtonShape.setColor(Color.parseColor("#E0E0E0"));
+                                    closeButtonShape.setColor(Color.parseColor("#F0F0F0"));
                                     break;
                             }
                             return false; // Let the click listener handle the click
@@ -1286,13 +1286,13 @@ public class InAppBrowser extends CordovaPlugin {
                     close.getAdjustViewBounds();
 
                        // Add padding
-                    close.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    close.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
                     
                     // Add gray background with border radius
                     android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
                     closeButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                     closeButtonShape.setCornerRadius(this.dpToPixels(8));
-                    closeButtonShape.setColor(Color.parseColor("#E0E0E0")); // Light gray background
+                    closeButtonShape.setColor(Color.parseColor("#F0F0F0")); // Light gray background
                     close.setBackground(closeButtonShape);
                     
                     // Add click effect (darker on press)
@@ -1302,12 +1302,12 @@ public class InAppBrowser extends CordovaPlugin {
                             switch (event.getAction()) {
                                 case android.view.MotionEvent.ACTION_DOWN:
                                     // Darker color on press
-                                    closeButtonShape.setColor(Color.parseColor("#BDBDBD"));
+                                    closeButtonShape.setColor(Color.parseColor("#D0D0D0"));
                                     break;
                                 case android.view.MotionEvent.ACTION_UP:
                                 case android.view.MotionEvent.ACTION_CANCEL:
                                     // Original color on release
-                                    closeButtonShape.setColor(Color.parseColor("#E0E0E0"));
+                                    closeButtonShape.setColor(Color.parseColor("#F0F0F0"));
                                     break;
                             }
                             return false; // Let the click listener handle the click
@@ -1595,7 +1595,7 @@ public class InAppBrowser extends CordovaPlugin {
                     menuButton.getAdjustViewBounds();
                     
                     // Set button color
-                    menuButton.setColorFilter(Color.WHITE);
+                    menuButton.setColorFilter(Color.BLACK);
                     
                     // Add padding (reduced for smaller width)
                     menuButton.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
@@ -1604,7 +1604,7 @@ public class InAppBrowser extends CordovaPlugin {
                     android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
                     menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
                     menuButtonShape.setCornerRadius(this.dpToPixels(8));
-                    menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
+                    menuButtonShape.setColor(Color.parseColor("#F0F0F0")); // Light gray background
                     menuButton.setBackground(menuButtonShape);
                     
                     // Add click effect (darker on press)
@@ -1614,12 +1614,12 @@ public class InAppBrowser extends CordovaPlugin {
                             switch (event.getAction()) {
                                 case android.view.MotionEvent.ACTION_DOWN:
                                     // Darker color on press
-                                    menuButtonShape.setColor(Color.parseColor("#444444"));
+                                    menuButtonShape.setColor(Color.parseColor("#D0D0D0"));
                                     break;
                                 case android.view.MotionEvent.ACTION_UP:
                                 case android.view.MotionEvent.ACTION_CANCEL:
                                     // Original color on release
-                                    menuButtonShape.setColor(Color.parseColor("#666666"));
+                                    menuButtonShape.setColor(Color.parseColor("#F0F0F0"));
                                     break;
                             }
                             return false; // Let the click listener handle the click
