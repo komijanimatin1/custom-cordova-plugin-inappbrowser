@@ -48,6 +48,7 @@
         self.footer = NO;
         self.footertitle = nil;
         self.injectbutton = NO;
+        self.menu = NO;
     }
 
     return self;

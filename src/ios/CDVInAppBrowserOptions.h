@@ -48,6 +48,7 @@
 @property (nonatomic, assign) BOOL footer;
 @property (nonatomic, copy) NSString* footertitle;
 @property (nonatomic, assign) BOOL injectbutton;
+@property (nonatomic, assign) BOOL menu;
 
 + (CDVInAppBrowserOptions*)parseOptions:(NSString*)options;
 

@@ -123,6 +123,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String FULLSCREEN = "fullscreen";
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
+    private static final String MENU_BUTTON = "menu";
 
     private static final int TOOLBAR_HEIGHT = 120;
 
@@ -157,6 +158,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean fullscreen = true;
        private boolean showInjectButton = false;
     private String injectJsCode = "";
+    private boolean showMenuButton = false;
     private String[] allowedSchemes;
     private InAppBrowserClient currentClient;
     
@@ -164,6 +166,10 @@ public class InAppBrowser extends CordovaPlugin {
     private WebView modalWebView;
     private RelativeLayout modalContainer;
     private boolean isModalVisible = false;
+    
+    // Menu modal for three-dot menu
+    private RelativeLayout menuModalContainer;
+    private boolean isMenuModalVisible = false;
 
     /**
      * Executes the request and returns PluginResult.
@@ -365,6 +371,9 @@ public class InAppBrowser extends CordovaPlugin {
         if (isModalVisible) {
             hideModalWebView();
         }
+        if (isMenuModalVisible) {
+            hideMenuModal();
+        }
         closeDialog();
     }
 
@@ -378,6 +387,10 @@ public class InAppBrowser extends CordovaPlugin {
         }
         if (isModalVisible && modalWebView != null) {
             modalWebView.onPause();
+        }
+        // Hide menu modal when app is paused
+        if (isMenuModalVisible) {
+            hideMenuModal();
         }
     }
 
@@ -401,6 +414,9 @@ public class InAppBrowser extends CordovaPlugin {
     public void onDestroy() {
         if (isModalVisible) {
             hideModalWebView();
+        }
+        if (isMenuModalVisible) {
+            hideMenuModal();
         }
         closeDialog();
     }
@@ -555,6 +571,11 @@ public class InAppBrowser extends CordovaPlugin {
                     hideModalWebView();
                 }
                 
+                // Hide menu modal if it's visible
+                if (isMenuModalVisible) {
+                    hideMenuModal();
+                }
+                
                 final WebView childView = inAppWebView;
                 // The JS protects against multiple calls, so this should happen only when
                 // closeDialog() is called by other native code.
@@ -651,8 +672,8 @@ public class InAppBrowser extends CordovaPlugin {
                 modalBackground.setColor(Color.WHITE); // White background
                 modalWebViewContainer.setBackground(modalBackground);
                 
-                // Add padding to modal container
-                modalWebViewContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+                // Remove padding to eliminate white area around WebView
+                modalWebViewContainer.setPadding(0, 0, 0, 0);
                 
                 // Create modal WebView
                 modalWebView = new WebView(cordova.getActivity());
@@ -689,46 +710,41 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
                 
-                // Add close button to modal
-                ImageButton closeModalButton = new ImageButton(cordova.getActivity());
-                closeModalButton.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
-                closeModalButton.setColorFilter(Color.WHITE);
+                // Add WebView to modal WebView container
+                modalWebViewContainer.addView(modalWebView);
                 
-                // Create oval background for close button
-                android.graphics.drawable.GradientDrawable closeButtonBackground = new android.graphics.drawable.GradientDrawable();
-                closeButtonBackground.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-                closeButtonBackground.setColor(Color.parseColor("#FF0000")); // Red background
-                closeButtonBackground.setStroke(dpToPixels(1), Color.WHITE); // White border
-                closeModalButton.setBackground(closeButtonBackground);
+                // Add modal WebView container to modal container
+                modalContainer.addView(modalWebViewContainer);
                 
-                RelativeLayout.LayoutParams closeButtonParams = new RelativeLayout.LayoutParams(
-                    dpToPixels(32),
-                    dpToPixels(32)
-                );
-                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_TOP);
-                closeButtonParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                closeButtonParams.setMargins(0, dpToPixels(8), dpToPixels(8), 0); // Position inside the modal, top-right corner
-                closeModalButton.setLayoutParams(closeButtonParams);
-                
-                closeModalButton.setOnClickListener(new View.OnClickListener() {
+                // Add click listener to background to close modal when clicking outside
+                modalContainer.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         hideModalWebView();
                     }
                 });
                 
-                // Add WebView to modal WebView container
-                modalWebViewContainer.addView(modalWebView);
-                
-                // Add modal WebView container and close button to modal container
-                modalContainer.addView(modalWebViewContainer);
-                modalContainer.addView(closeModalButton);
+                // Prevent clicks on the modal WebView container from closing the modal
+                modalWebViewContainer.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        // Do nothing - prevent event from bubbling up to modalContainer
+                    }
+                });
                 
                 // Add modal container to the main dialog
                 if (dialog.getWindow() != null && dialog.getWindow().getDecorView() != null) {
                     View decorView = dialog.getWindow().getDecorView();
                     if (decorView instanceof ViewGroup) {
                         ((ViewGroup) decorView).addView(modalContainer);
+                        
+                        // Disable interaction with background elements when modal is open
+                        if (inAppWebView != null) {
+                            inAppWebView.setEnabled(false);
+                        }
+                        
+                        // Disable footer buttons when modal is open
+                        disableFooterInteraction();
                     }
                 }
                 
@@ -769,8 +785,228 @@ public class InAppBrowser extends CordovaPlugin {
                 modalContainer = null;
                 modalWebView = null;
                 isModalVisible = false;
+                
+                // Re-enable interaction with background elements when modal is closed
+                if (inAppWebView != null) {
+                    inAppWebView.setEnabled(true);
+                }
+                
+                // Re-enable footer buttons when modal is closed
+                enableFooterInteraction();
             }
         });
+    }
+
+    /**
+     * Show menu modal for three-dot menu
+     */
+    private void showMenuModal() {
+        if (isMenuModalVisible || dialog == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Create menu modal container
+                menuModalContainer = new RelativeLayout(cordova.getActivity());
+                menuModalContainer.setBackgroundColor(Color.parseColor("#80000000")); // Semi-transparent background
+                
+                // Set layout parameters for menu modal container
+                RelativeLayout.LayoutParams menuModalContainerParams = new RelativeLayout.LayoutParams(
+                    LayoutParams.MATCH_PARENT,
+                    LayoutParams.MATCH_PARENT
+                );
+                menuModalContainer.setLayoutParams(menuModalContainerParams);
+                
+                // Create menu container with specific dimensions
+                LinearLayout menuContainer = new LinearLayout(cordova.getActivity());
+                menuContainer.setOrientation(LinearLayout.VERTICAL);
+                
+                // Calculate menu size (positioned above footer)
+                int screenWidth = cordova.getActivity().getResources().getDisplayMetrics().widthPixels;
+                int menuWidth = (int) (screenWidth * 0.6); // 60% of screen width
+                int menuHeight = LayoutParams.WRAP_CONTENT;
+                
+                // Set layout parameters for menu container
+                RelativeLayout.LayoutParams menuContainerParams = new RelativeLayout.LayoutParams(
+                    menuWidth,
+                    menuHeight
+                );
+                // Position above footer (bottom-right area)
+                menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+                menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                menuContainerParams.setMargins(0, 0, dpToPixels(16), dpToPixels(TOOLBAR_HEIGHT + 32)); // Above footer
+                menuContainer.setLayoutParams(menuContainerParams);
+                
+                // Add rounded corners and background to menu container
+                android.graphics.drawable.GradientDrawable menuBackground = new android.graphics.drawable.GradientDrawable();
+                menuBackground.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                menuBackground.setCornerRadius(dpToPixels(12)); // Rounded corners
+                menuBackground.setColor(Color.WHITE); // White background
+                menuContainer.setBackground(menuBackground);
+                
+                // Add shadow effect
+                menuContainer.setElevation(dpToPixels(8));
+                
+                // Add padding to menu container
+                menuContainer.setPadding(dpToPixels(8), dpToPixels(8), dpToPixels(8), dpToPixels(8));
+                
+                // Create menu items - Forward and Refresh
+                String[] menuItems = {"Forward", "Refresh"};
+                for (String item : menuItems) {
+                    TextView menuItem = new TextView(cordova.getActivity());
+                    menuItem.setText(item);
+                    menuItem.setTextColor(Color.BLACK);
+                    menuItem.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                    menuItem.setPadding(dpToPixels(16), dpToPixels(12), dpToPixels(16), dpToPixels(12));
+                    menuItem.setGravity(Gravity.CENTER_VERTICAL);
+                    
+                    // Add click effect
+                    menuItem.setBackgroundResource(android.R.drawable.list_selector_background);
+                    
+                    // Add click listener
+                    menuItem.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Handle menu item click
+                            String clickedItem = ((TextView) v).getText().toString();
+                            handleMenuItemClick(clickedItem);
+                            hideMenuModal();
+                        }
+                    });
+                    
+                    menuContainer.addView(menuItem);
+                    
+                    // Add separator (except for last item)
+                    if (!item.equals(menuItems[menuItems.length - 1])) {
+                        View separator = new View(cordova.getActivity());
+                        separator.setBackgroundColor(Color.parseColor("#E0E0E0"));
+                        LinearLayout.LayoutParams separatorParams = new LinearLayout.LayoutParams(
+                            LayoutParams.MATCH_PARENT,
+                            1
+                        );
+                        separator.setLayoutParams(separatorParams);
+                        menuContainer.addView(separator);
+                    }
+                }
+                
+                // Add menu container to modal container
+                menuModalContainer.addView(menuContainer);
+                
+                // Add click listener to background to close menu
+                menuModalContainer.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        hideMenuModal();
+                    }
+                });
+                
+                // Add modal container to the main dialog
+                if (dialog.getWindow() != null && dialog.getWindow().getDecorView() != null) {
+                    View decorView = dialog.getWindow().getDecorView();
+                    if (decorView instanceof ViewGroup) {
+                        ((ViewGroup) decorView).addView(menuModalContainer);
+                    }
+                }
+                
+                isMenuModalVisible = true;
+            }
+        });
+    }
+
+    /**
+     * Handle menu item click
+     */
+    private void handleMenuItemClick(String item) {
+        // You can implement specific actions for each menu item here
+        LOG.d(LOG_TAG, "Menu item clicked: " + item);
+        
+        // Handle menu item actions
+        switch (item) {
+            case "Forward":
+                // Navigate forward in WebView
+                if (inAppWebView != null && inAppWebView.canGoForward()) {
+                    inAppWebView.goForward();
+                }
+                break;
+            case "Refresh":
+                // Refresh the WebView
+                if (inAppWebView != null) {
+                    inAppWebView.reload();
+                }
+                break;
+        }
+    }
+
+    /**
+     * Hide menu modal
+     */
+    private void hideMenuModal() {
+        if (!isMenuModalVisible || menuModalContainer == null) {
+            return;
+        }
+
+        this.cordova.getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (menuModalContainer.getParent() != null) {
+                    ((ViewGroup) menuModalContainer.getParent()).removeView(menuModalContainer);
+                }
+                menuModalContainer = null;
+                isMenuModalVisible = false;
+            }
+        });
+    }
+
+    /**
+     * Disable footer interaction when modal is open
+     */
+    private void disableFooterInteraction() {
+        if (dialog != null && dialog.getWindow() != null) {
+            View decorView = dialog.getWindow().getDecorView();
+            disableFooterInteractionRecursively(decorView, true);
+        }
+    }
+
+    /**
+     * Enable footer interaction when modal is closed
+     */
+    private void enableFooterInteraction() {
+        if (dialog != null && dialog.getWindow() != null) {
+            View decorView = dialog.getWindow().getDecorView();
+            disableFooterInteractionRecursively(decorView, false);
+        }
+    }
+
+    /**
+     * Recursively disable/enable footer interaction
+     */
+    private void disableFooterInteractionRecursively(View view, boolean disable) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                disableFooterInteractionRecursively(viewGroup.getChildAt(i), disable);
+            }
+        } else if (view instanceof Button || view instanceof ImageButton || view instanceof TextView) {
+            // Check if this is a footer button by looking at its text, ID, or content description
+            String text = "";
+            String contentDesc = "";
+            
+            if (view instanceof TextView) {
+                text = ((TextView) view).getText().toString();
+            }
+            if (view.getContentDescription() != null) {
+                contentDesc = view.getContentDescription().toString();
+            }
+            
+            // Disable/enable footer buttons (AI button, menu button, close button)
+            if (text.equals("AI") || text.equals("Close") || text.equals("Back") || 
+                contentDesc.equals("Menu Button") || contentDesc.equals("Close Button")) {
+                view.setEnabled(!disable);
+                view.setClickable(!disable);
+            }
+        }
     }
 
 
@@ -821,6 +1057,49 @@ public class InAppBrowser extends CordovaPlugin {
 
     private InAppBrowser getInAppBrowser() {
         return this;
+    }
+
+    /**
+     * Update close button text based on navigation state
+     */
+    private void updateCloseButtonText() {
+        if (dialog != null && dialog.getWindow() != null) {
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // Find close buttons in the dialog and update their text
+                    View decorView = dialog.getWindow().getDecorView();
+                    updateButtonTextRecursively(decorView);
+                }
+            });
+        }
+    }
+
+    /**
+     * Recursively find and update close button text
+     */
+    private void updateButtonTextRecursively(View view) {
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                updateButtonTextRecursively(viewGroup.getChildAt(i));
+            }
+        } else if (view instanceof TextView) {
+            TextView textView = (TextView) view;
+            // Check if this is a close button by looking at its text or ID
+            if (textView.getText().toString().equals("Back") || 
+                textView.getText().toString().equals("Close") ||
+                textView.getContentDescription() != null && 
+                textView.getContentDescription().toString().equals("Close Button")) {
+                
+                // Only show "Back" if we can actually go back and we're not on the initial page
+                String newText = "Close";
+                if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
+                    newText = "Back";
+                }
+                textView.setText(newText);
+            }
+        }
     }
 
     /**
@@ -928,6 +1207,10 @@ public class InAppBrowser extends CordovaPlugin {
             if (injectJsCodeSet != null) {
                 injectJsCode = injectJsCodeSet;
             }
+            String menuButtonSet = features.get(MENU_BUTTON);
+            if (menuButtonSet != null) {
+                showMenuButton = menuButtonSet.equals("yes") ? true : false;
+            }
         }
 
         final CordovaWebView thatWebView = this.webView;
@@ -952,10 +1235,14 @@ public class InAppBrowser extends CordovaPlugin {
                 View _close;
                 Resources activityRes = cordova.getActivity().getResources();
 
+                // Determine button text based on whether we can go back
+                // Initially show "Close", then check if we can go back after page loads
+                String buttonText = "Close";
+
                 if (closeButtonCaption != "") {
                     // Use TextView for text
                     TextView close = new TextView(cordova.getActivity());
-                    close.setText(closeButtonCaption);
+                    close.setText(buttonText);
                     close.setTextSize(20);
                     if (closeButtonColor != "") close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
                     close.setGravity(android.view.Gravity.CENTER_VERTICAL);
@@ -1040,7 +1327,16 @@ public class InAppBrowser extends CordovaPlugin {
                 _close.setId(Integer.valueOf(id));
                 _close.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        closeDialog();
+                        // Check if we can go back in the WebView and we're not on the initial page
+                        if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
+                            // If we can go back, go back instead of closing
+                            inAppWebView.goBack();
+                            // Update button text after navigation
+                            updateCloseButtonText();
+                        } else {
+                            // If we can't go back (we're on the first page), close the dialog
+                            closeDialog();
+                        }
                     }
                 });
 
@@ -1060,28 +1356,24 @@ public class InAppBrowser extends CordovaPlugin {
                 dialog.getWindow().getAttributes().windowAnimations = android.R.style.Animation_Dialog;
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 
-                // Set fullscreen flags before showing the dialog
+                // Set soft fullscreen mode - full screen but keep system UI visible
                 if (fullscreen) {
+                    // Remove fullscreen flags to keep system UI visible
+                    dialog.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    
+                    // Set flags for proper layout
                     dialog.getWindow().setFlags(
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN | 
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS,
-                        WindowManager.LayoutParams.FLAG_FULLSCREEN | 
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS |
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
                         WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
                     );
                     
-                    // For Android 5.0+ (API 21+), also set system UI visibility
+                    // For Android 5.0+ (API 21+), set system UI visibility to keep bars visible
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                         dialog.getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         );
                     }
                 }
@@ -1272,6 +1564,88 @@ public class InAppBrowser extends CordovaPlugin {
                     });
 
                     footerContent.addView(injectButton);
+                    
+                    // Add space between AI button and menu button
+                    View spacer = new View(cordova.getActivity());
+                    LinearLayout.LayoutParams spacerLayout = new LinearLayout.LayoutParams(
+                        this.dpToPixels(8), // 8dp width for spacing
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    spacer.setLayoutParams(spacerLayout);
+                    footerContent.addView(spacer);
+                    
+                    // Add three-dot menu button (only if menu=yes)
+                    if (showMenuButton) {
+                        ImageButton menuButton = new ImageButton(cordova.getActivity());
+                        menuButton.setContentDescription("Menu Button");
+                        
+                        // Get the three-dot icon from drawable resources
+                        Resources menuActivityRes = cordova.getActivity().getResources();
+                        int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                        if (menuIconResId == 0) {
+                            // Fallback to system icon if custom icon not found
+                            menuIconResId = android.R.drawable.ic_menu_more;
+                        }
+                        Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
+                        menuButton.setImageDrawable(menuIcon);
+                        menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        menuButton.getAdjustViewBounds();
+                        
+                        // Set button color
+                        menuButton.setColorFilter(Color.WHITE);
+                        
+                        // Add padding (reduced for smaller width)
+                        menuButton.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
+                        
+                        // Add gray background with border radius
+                        android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
+                        menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                        menuButtonShape.setCornerRadius(this.dpToPixels(8));
+                        menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
+                        menuButton.setBackground(menuButtonShape);
+                        
+                        // Add click effect (darker on press)
+                        menuButton.setOnTouchListener(new View.OnTouchListener() {
+                            @Override
+                            public boolean onTouch(View v, android.view.MotionEvent event) {
+                                switch (event.getAction()) {
+                                    case android.view.MotionEvent.ACTION_DOWN:
+                                        // Darker color on press
+                                        menuButtonShape.setColor(Color.parseColor("#444444"));
+                                        break;
+                                    case android.view.MotionEvent.ACTION_UP:
+                                    case android.view.MotionEvent.ACTION_CANCEL:
+                                        // Original color on release
+                                        menuButtonShape.setColor(Color.parseColor("#666666"));
+                                        break;
+                                }
+                                return false; // Let the click listener handle the click
+                            }
+                        });
+
+                        LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
+                            LayoutParams.WRAP_CONTENT,
+                            LayoutParams.WRAP_CONTENT
+                        );
+                        menuButtonLayout.weight = 0; // No weight - fixed width
+                        menuButtonLayout.gravity = Gravity.CENTER;
+                        menuButton.setLayoutParams(menuButtonLayout);
+
+                        // Add click listener to show menu modal
+                        menuButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                // Toggle menu modal
+                                if (isMenuModalVisible) {
+                                    hideMenuModal();
+                                } else {
+                                    showMenuModal();
+                                }
+                            }
+                        });
+
+                        footerContent.addView(menuButton);
+                    }
                 }
 
                 // Add title in center
@@ -1293,7 +1667,7 @@ public class InAppBrowser extends CordovaPlugin {
                     footerContent.addView(footerText);
                 }
 
-                // Add close button
+                // Add close button with back/close functionality
                 View footerClose = createCloseButton(7);
                 LinearLayout.LayoutParams closeButtonLayout = new LinearLayout.LayoutParams(
                     LayoutParams.WRAP_CONTENT,
@@ -1473,6 +1847,8 @@ public class InAppBrowser extends CordovaPlugin {
                 
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
+                // Add top margin to avoid camera punch - increased for better clearance
+                webViewLayoutParams.setMargins(0, this.dpToPixels(48), 0, 0);
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
                 
@@ -1494,15 +1870,11 @@ public class InAppBrowser extends CordovaPlugin {
                     dialog.show();
                     dialog.getWindow().setAttributes(lp);
                     
-                    // Ensure fullscreen is maintained after showing
+                    // Ensure soft fullscreen is maintained after showing
                     if (fullscreen) {
                         dialog.getWindow().getDecorView().setSystemUiVisibility(
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                            View.SYSTEM_UI_FLAG_FULLSCREEN |
-                            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         );
                     }
                 }
@@ -1823,6 +2195,9 @@ public class InAppBrowser extends CordovaPlugin {
             // https://issues.apache.org/jira/browse/CB-11248
             view.clearFocus();
             view.requestFocus();
+
+            // Update close button text based on navigation state
+            updateCloseButtonText();
 
             try {
                 JSONObject obj = new JSONObject();

@@ -69,10 +69,17 @@
 @property (nonatomic, strong) IBOutlet UILabel* footerTitleLabel;
 @property (nonatomic, strong) IBOutlet CDVWKInAppBrowserUIDelegate* webViewUIDelegate;
 
+// Menu functionality
+@property (nonatomic, strong) UIButton* menuButton;
+@property (nonatomic, strong) UIView* menuContainer;
+@property (nonatomic, assign) BOOL isMenuVisible;
+
 // Modal WebView for AI functionality
 @property (nonatomic, strong) WKWebView* modalWebView;
 @property (nonatomic, strong) UIView* modalContainer;
 @property (nonatomic, assign) BOOL isModalVisible;
+
+
 
 @property (nonatomic, weak) id <CDVScreenOrientationDelegate> orientationDelegate;
 @property (nonatomic, weak) CDVWKInAppBrowser* navigationDelegate;
@@ -87,6 +94,12 @@
 // Modal WebView methods
 - (void)showModalWebView;
 - (void)hideModalWebView;
+
+// Menu methods
+- (void)showMenu;
+- (void)hideMenu;
+- (void)goForward;
+- (void)refreshPage;
 
 - (id)initWithBrowserOptions: (CDVInAppBrowserOptions*) browserOptions andSettings:(NSDictionary*) settings;
 

@@ -186,6 +186,7 @@ static CDVWKInAppBrowser* instance = nil;
     if (browserOptions.footer) {
         self.inAppBrowserViewController.toolbar.hidden = NO;
         self.inAppBrowserViewController.AIButton.hidden = !browserOptions.injectbutton;
+        self.inAppBrowserViewController.menuButton.hidden = !browserOptions.menu;
         if (browserOptions.footertitle != nil) {
             self.inAppBrowserViewController.footerTitleLabel.text = browserOptions.footertitle;
         }
@@ -715,6 +716,11 @@ BOOL isExiting = FALSE;
     if (self.isModalVisible) {
         [self hideModalWebView];
     }
+    
+    // Clean up menu
+    if (self.isMenuVisible) {
+        [self hideMenu];
+    }
 }
 
 - (void)createViews
@@ -726,6 +732,11 @@ BOOL isExiting = FALSE;
     
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
+    
+    // Add top margin to avoid camera punch area (24pt equivalent)
+    CGFloat topMargin = 24.0;
+    webViewBounds.origin.y += topMargin;
+    webViewBounds.size.height -= topMargin;
     
     // Calculate proper height reduction based on footer vs toolbar
     if (browserOptions.footer) {
@@ -920,6 +931,20 @@ BOOL isExiting = FALSE;
     [self.AIButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.AIButton];
 
+    // Create three-dot menu button
+    self.menuButton = [UIButton buttonWithType:UIButtonTypeSystem];
+    self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"];
+    [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    self.menuButton.layer.cornerRadius = 8.0f;
+    self.menuButton.layer.masksToBounds = YES;
+    self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(12, 12, 12, 12); // Smaller padding than AI button
+    self.menuButton.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal]; // Three dots
+    [self.menuButton addTarget:self action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
+    [self.menuButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
+    [self.menuButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
+    [self.toolbar addSubview:self.menuButton];
+
     self.footerTitleLabel = [[UILabel alloc] init];
     self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
     self.footerTitleLabel.textColor = [UIColor blackColor];
@@ -934,10 +959,13 @@ BOOL isExiting = FALSE;
     self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
     self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
     [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
-    [self.closeButton addTarget:self action:@selector(close) forControlEvents:UIControlEventTouchUpInside];
+    [self.closeButton addTarget:self action:@selector(closeOrGoBack) forControlEvents:UIControlEventTouchUpInside];
     [self.closeButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
     [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.closeButton];
+    
+    // Initialize close button title
+    [self updateCloseButtonTitle];
     
     [self.view addSubview:self.toolbar];
     [self.view addSubview:self.addressLabel];
@@ -1163,6 +1191,11 @@ BOOL isExiting = FALSE;
         [self hideModalWebView];
     }
     
+    // Hide menu if it's visible
+    if (self.isMenuVisible) {
+        [self hideMenu];
+    }
+    
     __weak UIViewController* weakSelf = self;
     
     // Run later to avoid the "took a long time" log message.
@@ -1213,6 +1246,8 @@ BOOL isExiting = FALSE;
             sender.backgroundColor = [UIColor colorWithHexString:@"#8A3FD1"]; // Darker purple
         } else if (sender == self.closeButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
+        } else if (sender == self.menuButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
         }
     }];
 }
@@ -1222,6 +1257,8 @@ BOOL isExiting = FALSE;
         if (sender == self.AIButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"]; // Original purple
         } else if (sender == self.closeButton) {
+            sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
+        } else if (sender == self.menuButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
         }
     }];
@@ -1279,40 +1316,15 @@ BOOL isExiting = FALSE;
         // Set WebViewClient for modal
         self.modalWebView.navigationDelegate = self;
         
-        // Add close button OUTSIDE the modal - positioned at top-right corner outside modal container
-        UIButton *closeModalButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        
-        // Calculate close button position OUTSIDE the modal WebView container (top-right corner)
-        CGFloat closeButtonX = modalWebViewContainer.frame.origin.x + modalWidth - 5; // 5pt outside right edge of modal
-        CGFloat closeButtonY = modalWebViewContainer.frame.origin.y - 10; // 10pt above top edge of modal
-        closeModalButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40); // 40pt × 40pt for better touch target
-        
-        // Create oval background for close button - NO WHITE BORDER
-        closeModalButton.backgroundColor = [UIColor colorWithHexString:@"#FF0000"]; // Red background
-        closeModalButton.layer.cornerRadius = 20.0; // Make it circular (half of 40pt)
-        closeModalButton.layer.masksToBounds = YES;
-        // Removed white border - no borderWidth or borderColor
-        
-        // Set close icon (X)
-        [closeModalButton setTitle:@"✕" forState:UIControlStateNormal];
-        [closeModalButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        closeModalButton.titleLabel.font = [UIFont systemFontOfSize:20.0]; // Larger font for better visibility
-        
-        [closeModalButton addTarget:self action:@selector(hideModalWebView) forControlEvents:UIControlEventTouchUpInside];
-        
-        // Debug: Log close button frame
-        NSLog(@"Close button frame: %@", NSStringFromCGRect(closeModalButton.frame));
-        NSLog(@"Close button target action: hideModalWebView");
+        // Add tap gesture to close modal when clicking outside WebView area
+        UITapGestureRecognizer *modalTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideModalWebView)];
+        [self.modalContainer addGestureRecognizer:modalTapGesture];
         
         // Add WebView to modal WebView container
         [modalWebViewContainer addSubview:self.modalWebView];
         
-        // Add modal WebView container and close button to modal container
+        // Add modal WebView container to modal container
         [self.modalContainer addSubview:modalWebViewContainer];
-        [self.modalContainer addSubview:closeModalButton];
-        
-        // Make sure close button is on top and accessible
-        [self.modalContainer bringSubviewToFront:closeModalButton];
         
         // Add modal container to the main view
         [self.view addSubview:self.modalContainer];
@@ -1342,6 +1354,123 @@ BOOL isExiting = FALSE;
     });
 }
 
+#pragma mark - Menu Methods
+
+- (void)showMenu {
+    if (self.isMenuVisible) {
+        return;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        // Create menu container (semi-transparent overlay)
+        self.menuContainer = [[UIView alloc] initWithFrame:self.view.bounds];
+        self.menuContainer.backgroundColor = [UIColor colorWithRed:0.0 green:0.0 blue:0.0 alpha:0.3]; // Semi-transparent background
+        
+        // Add tap gesture to close menu when tapping outside
+        UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(hideMenu)];
+        [self.menuContainer addGestureRecognizer:tapGesture];
+        
+        // Create menu popup container
+        UIView *menuPopup = [[UIView alloc] init];
+        menuPopup.backgroundColor = [UIColor whiteColor];
+        menuPopup.layer.cornerRadius = 12.0;
+        menuPopup.layer.shadowColor = [UIColor blackColor].CGColor;
+        menuPopup.layer.shadowOffset = CGSizeMake(0, 2);
+        menuPopup.layer.shadowOpacity = 0.3;
+        menuPopup.layer.shadowRadius = 4.0;
+        
+        // Calculate menu position (bottom-right area above footer)
+        CGFloat menuWidth = 120.0;
+        CGFloat menuHeight = 100.0;
+        CGFloat menuX = self.view.bounds.size.width - menuWidth - 16; // 16pt from right edge
+        CGFloat menuY = self.view.bounds.size.height - 120.0 - menuHeight - 16; // Above footer
+        
+        menuPopup.frame = CGRectMake(menuX, menuY, menuWidth, menuHeight);
+        
+        // Create menu items
+        UIButton *forwardButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        forwardButton.frame = CGRectMake(0, 0, menuWidth, 50);
+        [forwardButton setTitle:@"Forward" forState:UIControlStateNormal];
+        [forwardButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        forwardButton.titleLabel.font = [UIFont systemFontOfSize:16.0];
+        forwardButton.backgroundColor = [UIColor clearColor];
+        [forwardButton addTarget:self action:@selector(goForward) forControlEvents:UIControlEventTouchUpInside];
+        [menuPopup addSubview:forwardButton];
+        
+        // Add separator
+        UIView *separator = [[UIView alloc] initWithFrame:CGRectMake(8, 50, menuWidth - 16, 1)];
+        separator.backgroundColor = [UIColor colorWithRed:0.9 green:0.9 blue:0.9 alpha:1.0];
+        [menuPopup addSubview:separator];
+        
+        UIButton *refreshButton = [UIButton buttonWithType:UIButtonTypeSystem];
+        refreshButton.frame = CGRectMake(0, 51, menuWidth, 49);
+        [refreshButton setTitle:@"Refresh" forState:UIControlStateNormal];
+        [refreshButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        refreshButton.titleLabel.font = [UIFont systemFontOfSize:16.0];
+        refreshButton.backgroundColor = [UIColor clearColor];
+        [refreshButton addTarget:self action:@selector(refreshPage) forControlEvents:UIControlEventTouchUpInside];
+        [menuPopup addSubview:refreshButton];
+        
+        // Disable forward button if can't go forward
+        forwardButton.enabled = self.webView.canGoForward;
+        if (!forwardButton.enabled) {
+            [forwardButton setTitleColor:[UIColor lightGrayColor] forState:UIControlStateNormal];
+        }
+        
+        [self.menuContainer addSubview:menuPopup];
+        [self.view addSubview:self.menuContainer];
+        [self.view bringSubviewToFront:self.menuContainer];
+        
+        self.isMenuVisible = YES;
+    });
+}
+
+- (void)hideMenu {
+    if (!self.isMenuVisible) {
+        return;
+    }
+    
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [self.menuContainer removeFromSuperview];
+        self.menuContainer = nil;
+        self.isMenuVisible = NO;
+    });
+}
+
+- (void)goForward {
+    if (self.webView.canGoForward) {
+        [self.webView goForward];
+        // Navigation state will be updated in didFinishNavigation
+    }
+    [self hideMenu];
+}
+
+- (void)refreshPage {
+    [self.webView reload];
+    [self hideMenu];
+}
+
+- (void)updateCloseButtonTitle {
+    // Always check the current state of the WebView
+    if (self.webView.canGoBack) {
+        [self.closeButton setTitle:@"Back" forState:UIControlStateNormal];
+    } else {
+        [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+    }
+}
+
+- (void)closeOrGoBack {
+    // Check if we can go back
+    if (self.webView.canGoBack) {
+        // Go back in WebView history
+        [self.webView goBack];
+        // Navigation state will be updated in didFinishNavigation after the back navigation completes
+    } else {
+        // Close the InAppBrowser
+        [self close];
+    }
+}
+
 - (void)viewWillAppear:(BOOL)animated
 {
     [self rePositionViews];
@@ -1356,6 +1485,11 @@ BOOL isExiting = FALSE;
     // Hide modal if it's visible when view disappears
     if (self.isModalVisible) {
         [self hideModalWebView];
+    }
+    
+    // Hide menu if it's visible when view disappears
+    if (self.isMenuVisible) {
+        [self hideMenu];
     }
 }
 
@@ -1413,13 +1547,31 @@ BOOL isExiting = FALSE;
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
+        // Position menu button if enabled
+        if (browserOptions.menu) {
+            [self.menuButton sizeToFit];
+            CGRect menuButtonFrame = self.menuButton.frame;
+            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacer after AI button
+            menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
+            self.menuButton.frame = menuButtonFrame;
+            self.menuButton.hidden = NO;
+        } else {
+            self.menuButton.hidden = YES;
+        }
+
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
         closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
-        CGFloat titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
+        // Calculate title position based on whether menu is visible
+        CGFloat titleLabelX;
+        if (browserOptions.menu) {
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16;
+        } else {
+            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
+        }
         CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
         
@@ -1487,6 +1639,9 @@ BOOL isExiting = FALSE;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     
+    // Update close button title based on current navigation state
+    [self updateCloseButtonTitle];
+    
     NSLog(browserOptions.hidespinner ? @"Yes" : @"No");
     if(!browserOptions.hidespinner) {
         [self.spinner startAnimating];
@@ -1530,6 +1685,9 @@ BOOL isExiting = FALSE;
     self.backButton.enabled = theWebView.canGoBack;
     self.forwardButton.enabled = theWebView.canGoForward;
     theWebView.scrollView.contentInset = UIEdgeInsetsZero;
+    
+    // Update close button title based on current navigation state
+    [self updateCloseButtonTitle];
     
     [self.spinner stopAnimating];
     
@@ -1607,25 +1765,33 @@ BOOL isExiting = FALSE;
             
             // Find and update modal WebView container
             for (UIView *subview in self.modalContainer.subviews) {
-                if (subview != self.modalContainer.subviews.lastObject) { // Not the close button
-                    // Recalculate modal dimensions
-                    CGFloat modalWidth = size.width * 0.8;
-                    CGFloat modalHeight = size.height * 0.6;
+                // Recalculate modal dimensions
+                CGFloat modalWidth = size.width * 0.8;
+                CGFloat modalHeight = size.height * 0.6;
+                
+                subview.frame = CGRectMake(
+                    (size.width - modalWidth) / 2,
+                    (size.height - modalHeight) / 2,
+                    modalWidth,
+                    modalHeight
+                );
+            }
+        }
+        
+        // Reposition menu if it's visible
+        if (self.isMenuVisible && self.menuContainer) {
+            // Update menu container frame
+            self.menuContainer.frame = CGRectMake(0, 0, size.width, size.height);
+            
+            // Find and update menu popup
+            for (UIView *subview in self.menuContainer.subviews) {
+                if (subview != self.menuContainer) { // Menu popup
+                    CGFloat menuWidth = 120.0;
+                    CGFloat menuHeight = 100.0;
+                    CGFloat menuX = size.width - menuWidth - 16;
+                    CGFloat menuY = size.height - 120.0 - menuHeight - 16;
                     
-                    subview.frame = CGRectMake(
-                        (size.width - modalWidth) / 2,
-                        (size.height - modalHeight) / 2,
-                        modalWidth,
-                        modalHeight
-                    );
-                    
-                    // Update close button position
-                    UIButton *closeButton = self.modalContainer.subviews.lastObject;
-                    if ([closeButton isKindOfClass:[UIButton class]]) {
-                        CGFloat closeButtonX = (size.width - modalWidth) / 2 + modalWidth - 50; // 10pt from right edge of modal
-                        CGFloat closeButtonY = (size.height - modalHeight) / 2 + 10; // 10pt from top edge of modal
-                        closeButton.frame = CGRectMake(closeButtonX, closeButtonY, 40, 40);
-                    }
+                    subview.frame = CGRectMake(menuX, menuY, menuWidth, menuHeight);
                 }
             }
         }
