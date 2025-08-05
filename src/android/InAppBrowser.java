@@ -1278,7 +1278,7 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 else {
                     ImageButton close = new ImageButton(cordova.getActivity());
-                    int closeResId = activityRes.getIdentifier("ic_action_remove", "drawable", cordova.getActivity().getPackageName());
+                    int closeResId = activityRes.getIdentifier("ic_arrow_right", "drawable", cordova.getActivity().getPackageName());
                     Drawable closeIcon = activityRes.getDrawable(closeResId);
                     if (closeButtonColor != "") close.setColorFilter(android.graphics.Color.parseColor(closeButtonColor));
                     close.setImageDrawable(closeIcon);
@@ -1564,88 +1564,90 @@ public class InAppBrowser extends CordovaPlugin {
                     });
 
                     footerContent.addView(injectButton);
-                    
-                    // Add space between AI button and menu button
-                    View spacer = new View(cordova.getActivity());
-                    LinearLayout.LayoutParams spacerLayout = new LinearLayout.LayoutParams(
-                        this.dpToPixels(8), // 8dp width for spacing
-                        LayoutParams.WRAP_CONTENT
-                    );
-                    spacer.setLayoutParams(spacerLayout);
-                    footerContent.addView(spacer);
-                    
-                    // Add three-dot menu button (only if menu=yes)
-                    if (showMenuButton) {
-                        ImageButton menuButton = new ImageButton(cordova.getActivity());
-                        menuButton.setContentDescription("Menu Button");
-                        
-                        // Get the three-dot icon from drawable resources
-                        Resources menuActivityRes = cordova.getActivity().getResources();
-                        int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
-                        if (menuIconResId == 0) {
-                            // Fallback to system icon if custom icon not found
-                            menuIconResId = android.R.drawable.ic_menu_more;
-                        }
-                        Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
-                        menuButton.setImageDrawable(menuIcon);
-                        menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                        menuButton.getAdjustViewBounds();
-                        
-                        // Set button color
-                        menuButton.setColorFilter(Color.WHITE);
-                        
-                        // Add padding (reduced for smaller width)
-                        menuButton.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
-                        
-                        // Add gray background with border radius
-                        android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
-                        menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
-                        menuButtonShape.setCornerRadius(this.dpToPixels(8));
-                        menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
-                        menuButton.setBackground(menuButtonShape);
-                        
-                        // Add click effect (darker on press)
-                        menuButton.setOnTouchListener(new View.OnTouchListener() {
-                            @Override
-                            public boolean onTouch(View v, android.view.MotionEvent event) {
-                                switch (event.getAction()) {
-                                    case android.view.MotionEvent.ACTION_DOWN:
-                                        // Darker color on press
-                                        menuButtonShape.setColor(Color.parseColor("#444444"));
-                                        break;
-                                    case android.view.MotionEvent.ACTION_UP:
-                                    case android.view.MotionEvent.ACTION_CANCEL:
-                                        // Original color on release
-                                        menuButtonShape.setColor(Color.parseColor("#666666"));
-                                        break;
-                                }
-                                return false; // Let the click listener handle the click
-                            }
-                        });
-
-                        LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
-                            LayoutParams.WRAP_CONTENT,
+                }
+                
+                // Add three-dot menu button (only if menu=yes) - now independent of inject button
+                if (showMenuButton) {
+                    // Add space before menu button if AI button is also present
+                    if (showInjectButton) {
+                        View spacer = new View(cordova.getActivity());
+                        LinearLayout.LayoutParams spacerLayout = new LinearLayout.LayoutParams(
+                            this.dpToPixels(8), // 8dp width for spacing
                             LayoutParams.WRAP_CONTENT
                         );
-                        menuButtonLayout.weight = 0; // No weight - fixed width
-                        menuButtonLayout.gravity = Gravity.CENTER;
-                        menuButton.setLayoutParams(menuButtonLayout);
-
-                        // Add click listener to show menu modal
-                        menuButton.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                // Toggle menu modal
-                                if (isMenuModalVisible) {
-                                    hideMenuModal();
-                                } else {
-                                    showMenuModal();
-                                }
-                            }
-                        });
-
-                        footerContent.addView(menuButton);
+                        spacer.setLayoutParams(spacerLayout);
+                        footerContent.addView(spacer);
                     }
+                    
+                    ImageButton menuButton = new ImageButton(cordova.getActivity());
+                    menuButton.setContentDescription("Menu Button");
+                    
+                    // Get the three-dot icon from drawable resources
+                    Resources menuActivityRes = cordova.getActivity().getResources();
+                    int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                    if (menuIconResId == 0) {
+                        // Fallback to system icon if custom icon not found
+                        menuIconResId = android.R.drawable.ic_menu_more;
+                    }
+                    Drawable menuIcon = menuActivityRes.getDrawable(menuIconResId);
+                    menuButton.setImageDrawable(menuIcon);
+                    menuButton.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                    menuButton.getAdjustViewBounds();
+                    
+                    // Set button color
+                    menuButton.setColorFilter(Color.WHITE);
+                    
+                    // Add padding (reduced for smaller width)
+                    menuButton.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
+                    
+                    // Add gray background with border radius
+                    android.graphics.drawable.GradientDrawable menuButtonShape = new android.graphics.drawable.GradientDrawable();
+                    menuButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    menuButtonShape.setCornerRadius(this.dpToPixels(8));
+                    menuButtonShape.setColor(Color.parseColor("#666666")); // Dark gray background
+                    menuButton.setBackground(menuButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    menuButton.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    menuButtonShape.setColor(Color.parseColor("#444444"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    menuButtonShape.setColor(Color.parseColor("#666666"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
+
+                    LinearLayout.LayoutParams menuButtonLayout = new LinearLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    menuButtonLayout.weight = 0; // No weight - fixed width
+                    menuButtonLayout.gravity = Gravity.CENTER;
+                    menuButton.setLayoutParams(menuButtonLayout);
+
+                    // Add click listener to show menu modal
+                    menuButton.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            // Toggle menu modal
+                            if (isMenuModalVisible) {
+                                hideMenuModal();
+                            } else {
+                                showMenuModal();
+                            }
+                        }
+                    });
+
+                    footerContent.addView(menuButton);
                 }
 
                 // Add title in center
