@@ -126,6 +126,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String MENU_BUTTON = "menu";
 
     private static final int TOOLBAR_HEIGHT = 120;
+    private static final String MAIN_BACKGROUND_COLOR = "#F0F0F0";
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
@@ -1383,7 +1384,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Main container layout
                 LinearLayout main = new LinearLayout(cordova.getActivity());
                 main.setOrientation(LinearLayout.VERTICAL);
-                main.setBackgroundColor(Color.parseColor("#F0F0F0")); // Light gray background like the green area in reference
+                main.setBackgroundColor(Color.parseColor(MAIN_BACKGROUND_COLOR)); // Light gray background like the green area in reference
 
                 // Toolbar layout
                 RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
@@ -1488,7 +1489,8 @@ public class InAppBrowser extends CordovaPlugin {
                 if(footerColor != "") {
                     _footerColor = Color.parseColor(footerColor);
                 } else {
-                    _footerColor = android.graphics.Color.LTGRAY;
+                    // Use same color as main container for consistency
+                    _footerColor = Color.parseColor(MAIN_BACKGROUND_COLOR);
                 }
                 footer.setBackgroundColor(_footerColor);
                 LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
