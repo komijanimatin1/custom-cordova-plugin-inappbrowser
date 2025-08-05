@@ -1675,7 +1675,7 @@ public class InAppBrowser extends CordovaPlugin {
                     LayoutParams.WRAP_CONTENT,
                     LayoutParams.WRAP_CONTENT
                 );
-                closeButtonLayout.weight = 1; // Like flex: 1
+                closeButtonLayout.weight = 0; // Fixed width like menu button
                 closeButtonLayout.gravity = Gravity.CENTER;
                 footerClose.setLayoutParams(closeButtonLayout);
                 footerContent.addView(footerClose);
