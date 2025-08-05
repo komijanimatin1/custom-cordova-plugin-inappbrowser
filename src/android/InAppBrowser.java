@@ -1278,7 +1278,7 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 else {
                     ImageButton close = new ImageButton(cordova.getActivity());
-                    int closeResId = activityRes.getIdentifier("ic_arrow_right", "drawable", cordova.getActivity().getPackageName());
+                    int closeResId = activityRes.getIdentifier("arrow_right", "drawable", cordova.getActivity().getPackageName());
                     Drawable closeIcon = activityRes.getDrawable(closeResId);
                     if (closeButtonColor != "") close.setColorFilter(android.graphics.Color.parseColor(closeButtonColor));
                     close.setImageDrawable(closeIcon);
@@ -1584,7 +1584,7 @@ public class InAppBrowser extends CordovaPlugin {
                     
                     // Get the three-dot icon from drawable resources
                     Resources menuActivityRes = cordova.getActivity().getResources();
-                    int menuIconResId = menuActivityRes.getIdentifier("more_vert_24dp_000000_fill0_wght400_grad0_opsz24", "drawable", cordova.getActivity().getPackageName());
+                    int menuIconResId = menuActivityRes.getIdentifier("more.xml", "drawable", cordova.getActivity().getPackageName());
                     if (menuIconResId == 0) {
                         // Fallback to system icon if custom icon not found
                         menuIconResId = android.R.drawable.ic_menu_more;
