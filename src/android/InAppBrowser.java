@@ -1246,7 +1246,7 @@ public class InAppBrowser extends CordovaPlugin {
                     close.setTextSize(20);
                     if (closeButtonColor != "") close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
                     close.setGravity(android.view.Gravity.CENTER_VERTICAL);
-                    close.setPadding(this.dpToPixels(16), this.dpToPixels(12), this.dpToPixels(16), this.dpToPixels(12));
+                    close.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
                     
                     // Add gray background with border radius
                     android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
