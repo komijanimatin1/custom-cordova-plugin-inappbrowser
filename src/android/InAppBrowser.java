@@ -30,6 +30,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.net.http.SslError;
 import android.net.Uri;
 import android.os.Build;
@@ -1657,6 +1658,11 @@ public class InAppBrowser extends CordovaPlugin {
                     footerText.setTextColor(Color.BLACK);
                     footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
                     footerText.setGravity(Gravity.CENTER);
+                    // Apply custom font if present in assets/public
+                    android.graphics.Typeface footerTypeface = loadCustomFooterTypeface();
+                    if (footerTypeface != null) {
+                        footerText.setTypeface(footerTypeface);
+                    }
 
                     LinearLayout.LayoutParams textLayout = new LinearLayout.LayoutParams(
                         LayoutParams.WRAP_CONTENT,
@@ -1913,6 +1919,28 @@ public class InAppBrowser extends CordovaPlugin {
             callbackContext.sendPluginResult(result);
             if (!keepCallback) {
                 callbackContext = null;
+            }
+        }
+    }
+    
+    /**
+     * Load custom Typeface for footer title from packaged web assets.
+     * Tries a primary path and a Farsi-numerals fallback.
+     */
+    private android.graphics.Typeface loadCustomFooterTypeface() {
+        try {
+            return android.graphics.Typeface.createFromAsset(
+                cordova.getActivity().getAssets(),
+                "public/font/IRANYekanX(Pro)/IRANYekanX family/IRANYekanX-Bold.ttf"
+            );
+        } catch (Exception ignored) {
+            try {
+                return android.graphics.Typeface.createFromAsset(
+                    cordova.getActivity().getAssets(),
+                    "public/font/IRANYekanX(Pro)/Farsi numerals/IRANYekanXFaNum-Bold.ttf"
+                );
+            } catch (Exception ignoredToo) {
+                return null;
             }
         }
     }
