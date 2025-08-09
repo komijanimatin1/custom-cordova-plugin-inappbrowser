@@ -181,7 +181,7 @@ static CDVWKInAppBrowser* instance = nil;
         if (browserOptions.closebuttoncolor != nil) {
             [self.inAppBrowserViewController.closeButton setTitleColor:[UIColor colorWithHexString:browserOptions.closebuttoncolor] forState:UIControlStateNormal];
         }
-    }.
+    }
 
     if (browserOptions.footer) {
         self.inAppBrowserViewController.toolbar.hidden = NO;
