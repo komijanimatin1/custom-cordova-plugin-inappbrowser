@@ -181,7 +181,7 @@ static CDVWKInAppBrowser* instance = nil;
         if (browserOptions.closebuttoncolor != nil) {
             [self.inAppBrowserViewController.closeButton setTitleColor:[UIColor colorWithHexString:browserOptions.closebuttoncolor] forState:UIControlStateNormal];
         }
-    }
+    }.
 
     if (browserOptions.footer) {
         self.inAppBrowserViewController.toolbar.hidden = NO;
@@ -933,7 +933,7 @@ BOOL isExiting = FALSE;
 
     // Create three-dot menu button
     self.menuButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"];
+    self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
     [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     self.menuButton.layer.cornerRadius = 8.0f;
     self.menuButton.layer.masksToBounds = YES;
@@ -952,13 +952,29 @@ BOOL isExiting = FALSE;
     [self.toolbar addSubview:self.footerTitleLabel];
 
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"];
-    [self.closeButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+    self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
     self.closeButton.layer.cornerRadius = 8.0f;
     self.closeButton.layer.masksToBounds = YES;
     self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
-    self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
-    [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+    
+    // Use right arrow icon like Android instead of text
+    UIImage *rightArrowImage = [UIImage systemImageNamed:@"chevron.right"];
+    if (rightArrowImage == nil) {
+        // Fallback for older iOS versions
+        rightArrowImage = [UIImage imageNamed:@"arrow_right"];
+    }
+    if (rightArrowImage != nil) {
+        [self.closeButton setImage:rightArrowImage forState:UIControlStateNormal];
+        self.closeButton.tintColor = [UIColor blackColor];
+        // Remove title since we're using image
+        [self.closeButton setTitle:nil forState:UIControlStateNormal];
+    } else {
+        // Fallback to text if no image available
+        [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
+        [self.closeButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        self.closeButton.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    }
+    
     [self.closeButton addTarget:self action:@selector(closeOrGoBack) forControlEvents:UIControlEventTouchUpInside];
     [self.closeButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
     [self.closeButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
@@ -1245,9 +1261,9 @@ BOOL isExiting = FALSE;
         if (sender == self.AIButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#8A3FD1"]; // Darker purple
         } else if (sender == self.closeButton) {
-            sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
+            sender.backgroundColor = [UIColor colorWithHexString:@"#D0D0D0"]; // Darker gray to match Android
         } else if (sender == self.menuButton) {
-            sender.backgroundColor = [UIColor colorWithHexString:@"#BDBDBD"]; // Darker gray
+            sender.backgroundColor = [UIColor colorWithHexString:@"#D0D0D0"]; // Darker gray to match Android
         }
     }];
 }
@@ -1257,9 +1273,9 @@ BOOL isExiting = FALSE;
         if (sender == self.AIButton) {
             sender.backgroundColor = [UIColor colorWithHexString:@"#AB4CFF"]; // Original purple
         } else if (sender == self.closeButton) {
-            sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
+            sender.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
         } else if (sender == self.menuButton) {
-            sender.backgroundColor = [UIColor colorWithHexString:@"#E0E0E0"]; // Original gray
+            sender.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
         }
     }];
 }
@@ -1451,12 +1467,9 @@ BOOL isExiting = FALSE;
 }
 
 - (void)updateCloseButtonTitle {
-    // Always check the current state of the WebView
-    if (self.webView.canGoBack) {
-        [self.closeButton setTitle:@"Back" forState:UIControlStateNormal];
-    } else {
-        [self.closeButton setTitle:@"Close" forState:UIControlStateNormal];
-    }
+    // Since we're using arrow icon like Android, we don't need to update text
+    // The arrow icon represents both back and close functionality
+    // Just keep the same right arrow icon regardless of navigation state
 }
 
 - (void)closeOrGoBack {
