@@ -886,6 +886,16 @@ BOOL isExiting = FALSE;
     self.toolbar.barTintColor = [UIColor colorWithHexString:@"#F2F2F2"];
     self.toolbar.autoresizingMask = toolbarIsAtBottom ? (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleTopMargin) : UIViewAutoresizingFlexibleWidth;
     
+    // Remove default iOS toolbar styling to eliminate dark lines
+    self.toolbar.translucent = NO;
+    self.toolbar.barStyle = UIBarStyleDefault;
+    if ([self.toolbar respondsToSelector:@selector(setShadowImage:forToolbarPosition:)]) {
+        [self.toolbar setShadowImage:[UIImage new] forToolbarPosition:UIBarPositionBottom];
+    }
+    if ([self.toolbar respondsToSelector:@selector(setBackgroundImage:forToolbarPosition:barMetrics:)]) {
+        [self.toolbar setBackgroundImage:[UIImage new] forToolbarPosition:UIBarPositionBottom barMetrics:UIBarMetricsDefault];
+    }
+    
     CGFloat labelInset = 5.0;
     float locationBarY = toolbarIsAtBottom ? self.view.bounds.size.height - FOOTER_HEIGHT : self.view.bounds.size.height - LOCATIONBAR_HEIGHT;
     
@@ -1560,11 +1570,11 @@ BOOL isExiting = FALSE;
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
-        // Position menu button if enabled
+        // Position menu button if enabled - closer to AI button for left-side grouping
         if (browserOptions.menu) {
             [self.menuButton sizeToFit];
             CGRect menuButtonFrame = self.menuButton.frame;
-            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacer after AI button
+            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 4; // Reduced spacer to 4pt for tighter left grouping
             menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
             self.menuButton.frame = menuButtonFrame;
             self.menuButton.hidden = NO;
@@ -1578,12 +1588,12 @@ BOOL isExiting = FALSE;
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
-        // Calculate title position based on whether menu is visible
+        // Calculate title position - now positioned after left-side buttons with more space
         CGFloat titleLabelX;
         if (browserOptions.menu) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16;
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 24; // Increased spacing to 24pt for better visual separation
         } else {
-            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16;
+            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 24; // Increased spacing to 24pt for better visual separation
         }
         CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
