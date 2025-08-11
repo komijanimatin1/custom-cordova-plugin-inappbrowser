@@ -933,8 +933,8 @@ BOOL isExiting = FALSE;
     [self.AIButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     self.AIButton.layer.cornerRadius = 8.0f;
     self.AIButton.layer.masksToBounds = YES;
-    self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
-    self.AIButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size
+    self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16); // Match Android padding exactly
+    self.AIButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size exactly
     [self.AIButton setTitle:@"AI" forState:UIControlStateNormal];
     [self.AIButton addTarget:self action:@selector(injectScript) forControlEvents:UIControlEventTouchUpInside];
     [self.AIButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
@@ -943,12 +943,12 @@ BOOL isExiting = FALSE;
 
     // Create three-dot menu button
     self.menuButton = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
+    self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android exactly
     [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     self.menuButton.layer.cornerRadius = 8.0f;
     self.menuButton.layer.masksToBounds = YES;
-    self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(12, 12, 12, 12); // Smaller padding than AI button
-    self.menuButton.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(12, 12, 12, 12); // Match Android padding exactly
+    self.menuButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size exactly
     [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal]; // Three dots
     [self.menuButton addTarget:self action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
     [self.menuButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
@@ -958,7 +958,7 @@ BOOL isExiting = FALSE;
     self.footerTitleLabel = [[UILabel alloc] init];
     self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
     self.footerTitleLabel.textColor = [UIColor blackColor];
-    self.footerTitleLabel.font = [UIFont systemFontOfSize:28.0]; // Match Android text size
+    self.footerTitleLabel.font = [UIFont systemFontOfSize:28.0]; // Match Android text size exactly
     [self.toolbar addSubview:self.footerTitleLabel];
 
     self.closeButton = [UIButton buttonWithType:UIButtonTypeSystem];
@@ -1534,7 +1534,7 @@ BOOL isExiting = FALSE;
 
 - (void) rePositionViews {
     CGFloat statusBarHeight = [self getStatusBarOffset];
-    CGFloat footerHeight = 80.0; // Reduced footer height from 120pt to 80pt
+    CGFloat footerHeight = 120.0; // Match Android footer height exactly
     
     // Calculate the available height for the webView
     CGFloat availableHeight = self.view.bounds.size.height - statusBarHeight;
@@ -1547,7 +1547,7 @@ BOOL isExiting = FALSE;
         CGRect footerFrame = CGRectMake(0, self.view.bounds.size.height - footerHeight, self.view.bounds.size.width, footerHeight);
         self.toolbar.frame = footerFrame;
         
-        // Position webView container with 16pt margins and account for status bar
+        // Position webView container with 16pt margins and account for status bar (matches Android exactly)
         CGRect webViewContainerFrame = CGRectMake(16, statusBarHeight + 16, self.view.bounds.size.width - 32, availableHeight - 32);
         
         // Find the WebView container (first subview that's not toolbar, addressLabel, or spinner)
@@ -1563,10 +1563,10 @@ BOOL isExiting = FALSE;
             webViewContainer.frame = webViewContainerFrame;
         }
         
-        // Position buttons and title in footer with proper spacing like Android
+        // Position buttons and title in footer with exact Android spacing
         [self.AIButton sizeToFit];
         CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 16; // 16pt padding from left edge
+        aiButtonFrame.origin.x = 16; // 16pt padding from left edge (matches Android)
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
@@ -1574,7 +1574,7 @@ BOOL isExiting = FALSE;
         if (browserOptions.menu) {
             [self.menuButton sizeToFit];
             CGRect menuButtonFrame = self.menuButton.frame;
-            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacing between left buttons
+            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacing between left buttons (matches Android)
             menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
             self.menuButton.frame = menuButtonFrame;
             self.menuButton.hidden = NO;
@@ -1582,21 +1582,21 @@ BOOL isExiting = FALSE;
             self.menuButton.hidden = YES;
         }
 
-        // Position close button at far right with 16pt padding
+        // Position close button at far right with 16pt padding (matches Android)
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
-        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right edge
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16;
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
-        // Position title in center with proper spacing from both sides
+        // Position title in center with balanced spacing (matches Android layout exactly)
         CGFloat titleLabelX;
         if (browserOptions.menu) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 32; // 32pt spacing from left button group
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group (matches Android)
         } else {
-            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 32; // 32pt spacing from left button
+            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16; // 16pt spacing from left button (matches Android)
         }
-        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 32; // 32pt spacing from right button
+        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16; // 16pt spacing from right button (matches Android)
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
         
     } else {
