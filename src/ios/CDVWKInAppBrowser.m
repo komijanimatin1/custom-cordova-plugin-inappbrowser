@@ -1524,7 +1524,7 @@ BOOL isExiting = FALSE;
 
 - (void) rePositionViews {
     CGFloat statusBarHeight = [self getStatusBarOffset];
-    CGFloat footerHeight = 120.0; // Updated to match Android (120pt)
+    CGFloat footerHeight = 80.0; // Reduced footer height from 120pt to 80pt
     
     // Calculate the available height for the webView
     CGFloat availableHeight = self.view.bounds.size.height - statusBarHeight;
