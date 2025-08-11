@@ -733,8 +733,8 @@ BOOL isExiting = FALSE;
     CGRect webViewBounds = self.view.bounds;
     BOOL toolbarIsAtBottom = ![browserOptions.toolbarposition isEqualToString:kInAppBrowserToolbarBarPositionTop];
     
-    // Add top margin to avoid camera punch area (24pt equivalent)
-    CGFloat topMargin = 24.0;
+    // Add top margin to avoid camera punch area (48pt equivalent - matches Android exactly)
+    CGFloat topMargin = 48.0;
     webViewBounds.origin.y += topMargin;
     webViewBounds.size.height -= topMargin;
     
@@ -747,7 +747,7 @@ BOOL isExiting = FALSE;
         webViewBounds.size.height -= TOOLBAR_HEIGHT;
     }
     
-    // Apply 16pt margins to WebView bounds to create spacing from screen edges
+    // Apply 16pt margins to WebView bounds to create spacing from screen edges (matches Android exactly)
     webViewBounds.origin.x += 16.0;
     webViewBounds.origin.y += 16.0;
     webViewBounds.size.width -= 32.0; // 16pt on each side
@@ -809,10 +809,10 @@ BOOL isExiting = FALSE;
     }
 #endif
 
-    // Create a container view for the WebView with rounded corners
+    // Create a container view for the WebView with rounded corners (matches Android exactly)
     UIView *webViewContainer = [[UIView alloc] initWithFrame:webViewBounds];
     webViewContainer.backgroundColor = [UIColor whiteColor];
-    webViewContainer.layer.cornerRadius = 20.0; // 20pt border radius to match Android
+    webViewContainer.layer.cornerRadius = 20.0; // 20pt border radius to match Android exactly
     webViewContainer.layer.masksToBounds = YES; // Clip WebView content to rounded corners
     webViewContainer.clipsToBounds = YES;
     
@@ -1548,7 +1548,8 @@ BOOL isExiting = FALSE;
         self.toolbar.frame = footerFrame;
         
         // Position webView container with 16pt margins and account for status bar (matches Android exactly)
-        CGRect webViewContainerFrame = CGRectMake(16, statusBarHeight + 16, self.view.bounds.size.width - 32, availableHeight - 32);
+        // Use 16pt bottom margin to match Android spacing exactly
+        CGRect webViewContainerFrame = CGRectMake(16, statusBarHeight + 16, self.view.bounds.size.width - 32, availableHeight - 16);
         
         // Find the WebView container (first subview that's not toolbar, addressLabel, or spinner)
         UIView *webViewContainer = nil;
@@ -1590,13 +1591,14 @@ BOOL isExiting = FALSE;
         self.closeButton.frame = closeButtonFrame;
 
         // Position title in center with balanced spacing (matches Android layout exactly)
+        // Android uses 16dp footer padding, so we use 16pt spacing from buttons
         CGFloat titleLabelX;
         if (browserOptions.menu) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group (matches Android)
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group (matches Android 16dp)
         } else {
-            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16; // 16pt spacing from left button (matches Android)
+            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16; // 16pt spacing from left button (matches Android 16dp)
         }
-        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16; // 16pt spacing from right button (matches Android)
+        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16; // 16pt spacing from right button (matches Android 16dp)
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
         
     } else {
