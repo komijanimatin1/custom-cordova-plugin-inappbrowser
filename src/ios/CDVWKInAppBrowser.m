@@ -1563,18 +1563,18 @@ BOOL isExiting = FALSE;
             webViewContainer.frame = webViewContainerFrame;
         }
         
-        // Position buttons and title in footer with 16pt padding
+        // Position buttons and title in footer with proper spacing like Android
         [self.AIButton sizeToFit];
         CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 16; // 16pt padding from left
+        aiButtonFrame.origin.x = 16; // 16pt padding from left edge
         aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
         self.AIButton.frame = aiButtonFrame;
 
-        // Position menu button if enabled - closer to AI button for left-side grouping
+        // Position menu button if enabled - group with AI button on left side
         if (browserOptions.menu) {
             [self.menuButton sizeToFit];
             CGRect menuButtonFrame = self.menuButton.frame;
-            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 4; // Reduced spacer to 4pt for tighter left grouping
+            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacing between left buttons
             menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
             self.menuButton.frame = menuButtonFrame;
             self.menuButton.hidden = NO;
@@ -1582,20 +1582,21 @@ BOOL isExiting = FALSE;
             self.menuButton.hidden = YES;
         }
 
+        // Position close button at far right with 16pt padding
         [self.closeButton sizeToFit];
         CGRect closeButtonFrame = self.closeButton.frame;
-        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right
+        closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16; // 16pt padding from right edge
         closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
         self.closeButton.frame = closeButtonFrame;
 
-        // Calculate title position - now positioned after left-side buttons with more space
+        // Position title in center with proper spacing from both sides
         CGFloat titleLabelX;
         if (browserOptions.menu) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 24; // Increased spacing to 24pt for better visual separation
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 32; // 32pt spacing from left button group
         } else {
-            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 24; // Increased spacing to 24pt for better visual separation
+            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 32; // 32pt spacing from left button
         }
-        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 16;
+        CGFloat titleLabelWidth = CGRectGetMinX(closeButtonFrame) - titleLabelX - 32; // 32pt spacing from right button
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
         
     } else {
