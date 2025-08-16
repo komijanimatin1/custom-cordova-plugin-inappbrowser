@@ -1436,59 +1436,16 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 toolbar.setVerticalGravity(Gravity.TOP);
 
-                // Action Button Container layout (aligned to right)
-                RelativeLayout actionButtonContainer = new RelativeLayout(cordova.getActivity());
-                RelativeLayout.LayoutParams actionButtonLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                actionButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                actionButtonContainer.setLayoutParams(actionButtonLayoutParams);
-                actionButtonContainer.setHorizontalGravity(Gravity.RIGHT);
-                actionButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
-                actionButtonContainer.setId(Integer.valueOf(1));
-
-                // Back button
-                ImageButton back = new ImageButton(cordova.getActivity());
-                RelativeLayout.LayoutParams backLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                backLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-                back.setLayoutParams(backLayoutParams);
-                back.setContentDescription("Back Button");
-                back.setId(Integer.valueOf(2));
                 Resources activityRes = cordova.getActivity().getResources();
-                int backResId = activityRes.getIdentifier("ic_action_previous_item", "drawable", cordova.getActivity().getPackageName());
-                Drawable backIcon = activityRes.getDrawable(backResId);
-                if (navigationButtonColor != "") back.setColorFilter(android.graphics.Color.parseColor(navigationButtonColor));
-                back.setBackground(null);
-                back.setImageDrawable(backIcon);
-                back.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                back.setPadding(0, this.dpToPixels(10), 0, this.dpToPixels(10));
-                back.getAdjustViewBounds();
-
-                back.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        goBack();
-                    }
-                });
-
-                // Forward button
-                ImageButton forward = new ImageButton(cordova.getActivity());
-                RelativeLayout.LayoutParams forwardLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                forwardLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                forward.setLayoutParams(forwardLayoutParams);
-                forward.setContentDescription("Forward Button");
-                forward.setId(Integer.valueOf(3));
-                int fwdResId = activityRes.getIdentifier("ic_action_next_item", "drawable", cordova.getActivity().getPackageName());
-                Drawable fwdIcon = activityRes.getDrawable(fwdResId);
-                if (navigationButtonColor != "") forward.setColorFilter(android.graphics.Color.parseColor(navigationButtonColor));
-                forward.setBackground(null);
-                forward.setImageDrawable(fwdIcon);
-                forward.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                forward.setPadding(0, this.dpToPixels(10), 0, this.dpToPixels(10));
-                forward.getAdjustViewBounds();
-
-                forward.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        goForward();
-                    }
-                });
+                // Header close-like button (left) — similar to footer close button
+                if (showBackButton) {
+                    View headerClose = createCloseButton(2);
+                    // Force align left for header close
+                    RelativeLayout.LayoutParams headerCloseLp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                    headerCloseLp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                    headerClose.setLayoutParams(headerCloseLp);
+                    toolbar.addView(headerClose);
+                }
 
                 // Edit Text Box (centered)
                 edittext = new EditText(cordova.getActivity());
@@ -1515,8 +1472,7 @@ public class InAppBrowser extends CordovaPlugin {
                 });
 
 
-                // Add Back ImageButton to the toolbar (left)
-                toolbar.addView(back);
+                // Back ImageButton removed; header close-like button used instead
 
                 // Footer
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
@@ -1842,12 +1798,8 @@ public class InAppBrowser extends CordovaPlugin {
                 edittext.setBackground(null);
                 edittext.setGravity(Gravity.CENTER);
 
-                // Add the forward button to our action button container (right side)
-                actionButtonContainer.addView(forward);
-
                 // Add the views to our toolbar based on new simplified flags
                 if (showUrl) toolbar.addView(edittext);
-                if (showNavigationButtons) toolbar.addView(actionButtonContainer);
 
                 // Always add the toolbar container (we now control internal visibility with flags)
                 main.addView(toolbar);
