@@ -1820,15 +1820,12 @@ public class InAppBrowser extends CordovaPlugin {
                 actionButtonContainer.addView(back);
                 actionButtonContainer.addView(forward);
 
-                // Add the views to our toolbar if they haven't been disabled
-                if (!hideNavigationButtons) toolbar.addView(actionButtonContainer);
-                if (!hideUrlBar) toolbar.addView(edittext);
+                // Add the views to our toolbar based on new simplified flags
+                if (showNavigationButtons) toolbar.addView(actionButtonContainer);
+                if (showUrl) toolbar.addView(edittext);
 
-                // Don't add the toolbar if its been disabled
-                if (getShowLocationBar()) {
-                    // Add our toolbar to our main view/layout
-                    main.addView(toolbar);
-                }
+                // Always add the toolbar container (we now control internal visibility with flags)
+                main.addView(toolbar);
 
                 // Add our webview to our main view/layout with margin and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
