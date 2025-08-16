@@ -130,7 +130,10 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String NAVIGATION_BUTTONS = "navigationbuttons";
     private static final String BACK_BUTTON = "backbutton";
 
-    private static final int TOOLBAR_HEIGHT = 120;
+    private static final int TOOLBAR_HEIGHT = 110; // default toolbar height (dp)
+    private static final int FOOTER_HEIGHT = 120; // default footer height (dp)
+    private static final String TOOLBAR_HEIGHT_OPTION = "toolbarheight";
+    private static final String FOOTER_HEIGHT_OPTION = "footerheight";
 
     private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
 
@@ -158,6 +161,8 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean showNavigationButtons = false; // default: navigation arrows hidden
     private boolean showBackButton = true; // default: back button visible
     private String navigationButtonColor = "";
+    private int toolbarHeightDp = TOOLBAR_HEIGHT;
+    private int footerHeightDp = FOOTER_HEIGHT;
     private boolean showFooter = false;
     private String footerColor = "";
     private String footerTitle = "";
@@ -843,7 +848,9 @@ public class InAppBrowser extends CordovaPlugin {
                 // Position above footer (bottom-right area)
                 menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
                 menuContainerParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                menuContainerParams.setMargins(0, 0, dpToPixels(16), dpToPixels(TOOLBAR_HEIGHT + 32)); // Above footer
+                // Position menu above footer using toolbar/footer heights
+                int menuBottomMargin = dpToPixels(footerHeightDp + 32);
+                menuContainerParams.setMargins(0, 0, dpToPixels(16), menuBottomMargin); // Above footer
                 menuContainer.setLayoutParams(menuContainerParams);
                 
                 // Add rounded corners and background to menu container
@@ -1191,9 +1198,21 @@ public class InAppBrowser extends CordovaPlugin {
             if (toolbarColorSet != null) {
                 toolbarColor = android.graphics.Color.parseColor(toolbarColorSet);
             }
+            String toolbarHeightSet = features.get(TOOLBAR_HEIGHT_OPTION);
+            if (toolbarHeightSet != null) {
+                try {
+                    toolbarHeightDp = Integer.parseInt(toolbarHeightSet);
+                } catch (NumberFormatException ignored) {}
+            }
             String navigationButtonColorSet = features.get(NAVIGATION_COLOR);
             if (navigationButtonColorSet != null) {
                 navigationButtonColor = navigationButtonColorSet;
+            }
+            String footerHeightSet = features.get(FOOTER_HEIGHT_OPTION);
+            if (footerHeightSet != null) {
+                try {
+                    footerHeightDp = Integer.parseInt(footerHeightSet);
+                } catch (NumberFormatException ignored) {}
             }
             String showFooterSet = features.get(FOOTER);
             if (showFooterSet != null) {
@@ -1404,8 +1423,12 @@ public class InAppBrowser extends CordovaPlugin {
                 RelativeLayout toolbar = new RelativeLayout(cordova.getActivity());
                 //Please, no more black!
                 toolbar.setBackgroundColor(toolbarColor);
-                toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT)));
-                toolbar.setPadding(this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2), this.dpToPixels(2));
+                toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(toolbarHeightDp)));
+                // Add padding and small top margin
+                toolbar.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
+                RelativeLayout.LayoutParams toolbarLP = (RelativeLayout.LayoutParams) toolbar.getLayoutParams();
+                toolbarLP.setMargins(0, this.dpToPixels(8), 0, 0);
+                toolbar.setLayoutParams(toolbarLP);
                 if (leftToRight) {
                     toolbar.setHorizontalGravity(Gravity.LEFT);
                 } else {
@@ -1413,20 +1436,19 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 toolbar.setVerticalGravity(Gravity.TOP);
 
-                // Action Button Container layout
+                // Action Button Container layout (aligned to right)
                 RelativeLayout actionButtonContainer = new RelativeLayout(cordova.getActivity());
                 RelativeLayout.LayoutParams actionButtonLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                if (leftToRight) actionButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
-                else actionButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                actionButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
                 actionButtonContainer.setLayoutParams(actionButtonLayoutParams);
-                actionButtonContainer.setHorizontalGravity(Gravity.LEFT);
+                actionButtonContainer.setHorizontalGravity(Gravity.RIGHT);
                 actionButtonContainer.setVerticalGravity(Gravity.CENTER_VERTICAL);
-                actionButtonContainer.setId(leftToRight ? Integer.valueOf(5) : Integer.valueOf(1));
+                actionButtonContainer.setId(Integer.valueOf(1));
 
                 // Back button
                 ImageButton back = new ImageButton(cordova.getActivity());
                 RelativeLayout.LayoutParams backLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                backLayoutParams.addRule(RelativeLayout.ALIGN_LEFT);
+                backLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
                 back.setLayoutParams(backLayoutParams);
                 back.setContentDescription("Back Button");
                 back.setId(Integer.valueOf(2));
@@ -1449,7 +1471,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Forward button
                 ImageButton forward = new ImageButton(cordova.getActivity());
                 RelativeLayout.LayoutParams forwardLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                forwardLayoutParams.addRule(RelativeLayout.RIGHT_OF, 2);
+                forwardLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
                 forward.setLayoutParams(forwardLayoutParams);
                 forward.setContentDescription("Forward Button");
                 forward.setId(Integer.valueOf(3));
@@ -1468,11 +1490,12 @@ public class InAppBrowser extends CordovaPlugin {
                     }
                 });
 
-                // Edit Text Box
+                // Edit Text Box (centered)
                 edittext = new EditText(cordova.getActivity());
                 RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
-                textLayoutParams.addRule(RelativeLayout.RIGHT_OF, 1);
-                textLayoutParams.addRule(RelativeLayout.LEFT_OF, 5);
+                textLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
+                // Reserve space on left and right so text is centered without overlapping buttons
+                textLayoutParams.setMargins(this.dpToPixels(72), 0, this.dpToPixels(72), 0);
                 edittext.setLayoutParams(textLayoutParams);
                 edittext.setId(Integer.valueOf(4));
                 edittext.setSingleLine(true);
@@ -1492,10 +1515,8 @@ public class InAppBrowser extends CordovaPlugin {
                 });
 
 
-                // Header Close/Done button
-                int closeButtonId = leftToRight ? 1 : 5;
-                View close = createCloseButton(closeButtonId);
-                toolbar.addView(close);
+                // Add Back ImageButton to the toolbar (left)
+                toolbar.addView(back);
 
                 // Footer
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
@@ -1506,7 +1527,7 @@ public class InAppBrowser extends CordovaPlugin {
                     _footerColor = android.graphics.Color.LTGRAY;
                 }
                 footer.setBackgroundColor(_footerColor);
-                LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(TOOLBAR_HEIGHT));
+                LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(footerHeightDp));
                 footer.setLayoutParams(footerLayout);
                 footer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
 
@@ -1816,13 +1837,17 @@ public class InAppBrowser extends CordovaPlugin {
                 inAppWebView.requestFocus();
                 inAppWebView.requestFocusFromTouch();
 
-                // Add the back and forward buttons to our action button container layout
-                actionButtonContainer.addView(back);
+
+                // Configure EditText appearance: centered, no underline, centered text
+                edittext.setBackground(null);
+                edittext.setGravity(Gravity.CENTER);
+
+                // Add the forward button to our action button container (right side)
                 actionButtonContainer.addView(forward);
 
                 // Add the views to our toolbar based on new simplified flags
-                if (showNavigationButtons) toolbar.addView(actionButtonContainer);
                 if (showUrl) toolbar.addView(edittext);
+                if (showNavigationButtons) toolbar.addView(actionButtonContainer);
 
                 // Always add the toolbar container (we now control internal visibility with flags)
                 main.addView(toolbar);
