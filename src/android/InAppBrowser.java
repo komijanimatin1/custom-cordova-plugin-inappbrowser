@@ -1358,8 +1358,13 @@ public class InAppBrowser extends CordovaPlugin {
                 }
 
                 RelativeLayout.LayoutParams closeLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                if (leftToRight) closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-                else closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                // FORCES the header button to the LEFT, regardless of RTL settings
+                if (id == 2) { 
+                    closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                } else { // All other buttons respect RTL settings
+                    if (leftToRight) closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                    else closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
+                }
                 _close.setLayoutParams(closeLayoutParams);
                
 
@@ -1430,26 +1435,33 @@ public class InAppBrowser extends CordovaPlugin {
                 //Please, no more black!
                 toolbar.setBackgroundColor(toolbarColor);
                 toolbar.setLayoutParams(new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(toolbarHeightDp)));
-                // Add padding and small top margin
-                toolbar.setPadding(this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8), this.dpToPixels(8));
+                // Add minimal padding and no top margin
+                toolbar.setPadding(this.dpToPixels(4), this.dpToPixels(2), this.dpToPixels(4), this.dpToPixels(2));
                 RelativeLayout.LayoutParams toolbarLP = (RelativeLayout.LayoutParams) toolbar.getLayoutParams();
-                toolbarLP.setMargins(0, this.dpToPixels(8), 0, 0);
-                toolbar.setLayoutParams(toolbarLP);
-                if (leftToRight) {
-                    toolbar.setHorizontalGravity(Gravity.LEFT);
-                } else {
-                    toolbar.setHorizontalGravity(Gravity.RIGHT);
+                
+                // Get status bar height and add it as a top margin to the toolbar
+                int statusBarHeight = 0;
+                int resourceId = cordova.getActivity().getResources().getIdentifier("status_bar_height", "dimen", "android");
+                if (resourceId > 0) {
+                    statusBarHeight = cordova.getActivity().getResources().getDimensionPixelSize(resourceId);
                 }
-                toolbar.setVerticalGravity(Gravity.TOP);
+                toolbarLP.setMargins(0, statusBarHeight, 0, 0);
+
+                toolbar.setLayoutParams(toolbarLP);
+                // These gravity settings were likely overriding the button's layout params. Removing them.
+                // if (leftToRight) {
+                //     toolbar.setHorizontalGravity(Gravity.LEFT);
+                // } else {
+                //     toolbar.setHorizontalGravity(Gravity.RIGHT);
+                // }
+                // toolbar.setVerticalGravity(Gravity.TOP);
 
                 Resources activityRes = cordova.getActivity().getResources();
                 // Header close-like button (left) — similar to footer close button
                 if (showBackButton && showToolbar) {
                     View headerClose = createCloseButton(2);
-                    // Force align start for header close (RTL-safe)
-                    RelativeLayout.LayoutParams headerCloseLp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                    headerCloseLp.addRule(RelativeLayout.ALIGN_PARENT_START);
-                    headerClose.setLayoutParams(headerCloseLp);
+                    // The button's position is now handled inside createCloseButton,
+                    // so we can just add it to the toolbar.
                     toolbar.addView(headerClose);
                 }
 
@@ -1850,7 +1862,7 @@ public class InAppBrowser extends CordovaPlugin {
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
                 // Add top margin to avoid camera punch - increased for better clearance
-                webViewLayoutParams.setMargins(0, this.dpToPixels(48), 0, 0);
+                webViewLayoutParams.setMargins(0, 0, 0, 0);
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
                 
