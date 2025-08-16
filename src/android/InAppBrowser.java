@@ -111,6 +111,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final Boolean DEFAULT_HARDWARE_BACK = true;
     private static final String USER_WIDE_VIEW_PORT = "useWideViewPort";
     private static final String TOOLBAR_COLOR = "toolbarcolor";
+    private static final String TOOLBAR = "toolbar";
     private static final String CLOSE_BUTTON_CAPTION = "closebuttoncaption";
     private static final String CLOSE_BUTTON_COLOR = "closebuttoncolor";
     private static final String LEFT_TO_RIGHT = "lefttoright";
@@ -160,6 +161,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean showUrl = false; // default: url hidden
     private boolean showNavigationButtons = false; // default: navigation arrows hidden
     private boolean showBackButton = true; // default: back button visible
+    private boolean showToolbar = false; // default: toolbar hidden
     private String navigationButtonColor = "";
     private int toolbarHeightDp = TOOLBAR_HEIGHT;
     private int footerHeightDp = FOOTER_HEIGHT;
@@ -1198,6 +1200,10 @@ public class InAppBrowser extends CordovaPlugin {
             if (toolbarColorSet != null) {
                 toolbarColor = android.graphics.Color.parseColor(toolbarColorSet);
             }
+            String toolbarSet = features.get(TOOLBAR);
+            if (toolbarSet != null) {
+                showToolbar = toolbarSet.equals("yes");
+            }
             String toolbarHeightSet = features.get(TOOLBAR_HEIGHT_OPTION);
             if (toolbarHeightSet != null) {
                 try {
@@ -1438,11 +1444,11 @@ public class InAppBrowser extends CordovaPlugin {
 
                 Resources activityRes = cordova.getActivity().getResources();
                 // Header close-like button (left) — similar to footer close button
-                if (showBackButton) {
+                if (showBackButton && showToolbar) {
                     View headerClose = createCloseButton(2);
-                    // Force align left for header close
+                    // Force align start for header close (RTL-safe)
                     RelativeLayout.LayoutParams headerCloseLp = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
-                    headerCloseLp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                    headerCloseLp.addRule(RelativeLayout.ALIGN_PARENT_START);
                     headerClose.setLayoutParams(headerCloseLp);
                     toolbar.addView(headerClose);
                 }
@@ -1799,10 +1805,10 @@ public class InAppBrowser extends CordovaPlugin {
                 edittext.setGravity(Gravity.CENTER);
 
                 // Add the views to our toolbar based on new simplified flags
-                if (showUrl) toolbar.addView(edittext);
-
-                // Always add the toolbar container (we now control internal visibility with flags)
-                main.addView(toolbar);
+                if (showToolbar) {
+                    if (showUrl) toolbar.addView(edittext);
+                    main.addView(toolbar);
+                }
 
                 // Add our webview to our main view/layout with margin and border radius
                 RelativeLayout webViewLayout = new RelativeLayout(cordova.getActivity());
