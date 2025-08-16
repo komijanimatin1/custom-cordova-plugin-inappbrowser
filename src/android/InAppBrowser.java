@@ -125,6 +125,10 @@ public class InAppBrowser extends CordovaPlugin {
        private static final String INJECT_BUTTON = "injectbutton";
     private static final String INJECT_JS_CODE = "injectjscode";
     private static final String MENU_BUTTON = "menu";
+    // New simplified toolbar feature keys
+    private static final String SHOW_URL = "showurl";
+    private static final String NAVIGATION_BUTTONS = "navigationbuttons";
+    private static final String BACK_BUTTON = "backbutton";
 
     private static final int TOOLBAR_HEIGHT = 120;
 
@@ -149,9 +153,11 @@ public class InAppBrowser extends CordovaPlugin {
     private String closeButtonColor = "";
     private boolean leftToRight = false;
     private int toolbarColor = android.graphics.Color.LTGRAY;
-    private boolean hideNavigationButtons = false;
+    // New toolbar flags: defaults per new system
+    private boolean showUrl = false; // default: url hidden
+    private boolean showNavigationButtons = false; // default: navigation arrows hidden
+    private boolean showBackButton = true; // default: back button visible
     private String navigationButtonColor = "";
-    private boolean hideUrlBar = false;
     private boolean showFooter = false;
     private String footerColor = "";
     private String footerTitle = "";
@@ -1110,22 +1116,30 @@ public class InAppBrowser extends CordovaPlugin {
      * @param features jsonObject
      */
     public String showWebPage(final String url, HashMap<String, String> features) {
-        // Determine if we should hide the location bar.
-        showLocationBar = true;
+        // Initialize simplified toolbar flags (always show toolbar container)
+        // showUrl: whether to display URL field (default false)
+        // showNavigationButtons: show back/forward arrows (default false)
+        // showBackButton: show header back/close button (default true)
+        showUrl = false;
+        showNavigationButtons = false;
+        showBackButton = true;
         showZoomControls = true;
         openWindowHidden = false;
         mediaPlaybackRequiresUserGesture = false;
 
         if (features != null) {
-            String show = features.get(LOCATION);
-            if (show != null) {
-                showLocationBar = show.equals("yes") ? true : false;
+            // New feature flags
+            String showUrlSet = features.get(SHOW_URL);
+            if (showUrlSet != null) {
+                showUrl = showUrlSet.equals("yes");
             }
-            if(showLocationBar) {
-                String hideNavigation = features.get(HIDE_NAVIGATION);
-                String hideUrl = features.get(HIDE_URL);
-                if(hideNavigation != null) hideNavigationButtons = hideNavigation.equals("yes") ? true : false;
-                if(hideUrl != null) hideUrlBar = hideUrl.equals("yes") ? true : false;
+            String navSet = features.get(NAVIGATION_BUTTONS);
+            if (navSet != null) {
+                showNavigationButtons = navSet.equals("yes");
+            }
+            String backSet = features.get(BACK_BUTTON);
+            if (backSet != null) {
+                showBackButton = backSet.equals("yes");
             }
             String zoom = features.get(ZOOM);
             if (zoom != null) {
