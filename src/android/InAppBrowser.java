@@ -1417,14 +1417,21 @@ public class InAppBrowser extends CordovaPlugin {
                 _close.setId(Integer.valueOf(id));
                 _close.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        // Check if we can go back in the WebView and we're not on the initial page
-                        if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
-                            // If we can go back, go back instead of closing
-                            inAppWebView.goBack();
-                            // Update button text after navigation
-                            updateCloseButtonText();
-                        } else {
-                            // If we can't go back (we're on the first page), close the dialog
+                        // Toolbar back button (ID 2): emit a message event to host app
+                        if (v.getId() == Integer.valueOf(2)) {
+                            try {
+                                JSONObject obj = new JSONObject();
+                                obj.put("type", MESSAGE_EVENT);
+                                JSONObject data = new JSONObject();
+                                data.put("type", "toolbarback");
+                                obj.put("data", data);
+                                sendUpdate(obj, true);
+                            } catch (JSONException ex) {
+                                LOG.e(LOG_TAG, "Error sending toolbarback message: " + ex.getMessage());
+                            }
+                        }
+                        // All other close buttons (like footer, ID 7) will just close the dialog
+                        else {
                             closeDialog();
                         }
                     }
