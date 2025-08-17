@@ -39,6 +39,7 @@ import android.text.InputType;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -106,6 +107,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String CLEAR_ALL_CACHE = "clearcache";
     private static final String CLEAR_SESSION_CACHE = "clearsessioncache";
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
+    private static final String GESTURES = "gestures";
     private static final String MEDIA_PLAYBACK_REQUIRES_USER_ACTION = "mediaPlaybackRequiresUserAction";
     private static final String SHOULD_PAUSE = "shouldPauseOnSuspend";
     private static final Boolean DEFAULT_HARDWARE_BACK = true;
@@ -148,6 +150,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean clearAllCache = false;
     private boolean clearSessionCache = false;
     private boolean hadwareBackButton = true;
+    private boolean gesturesEnabled = true; // Default: gestures enabled
     private boolean mediaPlaybackRequiresUserGesture = false;
     private boolean shouldPauseInAppBrowser = false;
     private boolean useWideViewPort = true;
@@ -1036,6 +1039,42 @@ public class InAppBrowser extends CordovaPlugin {
     }
 
     /**
+     * Has the user set gestures to be enabled
+     * @return boolean
+     */
+    public boolean gesturesEnabled() {
+        return gesturesEnabled;
+    }
+
+    /**
+     * Handle hardware back button and gesture navigation
+     */
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            if (!hadwareBackButton) {
+                // Block hardware back button if disabled
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Handle gesture navigation (edge swipe)
+     */
+    public boolean onTouchEvent(MotionEvent event) {
+        // Block edge swipe gestures if gestures are disabled or hardware back is disabled
+        if ((!gesturesEnabled || !hadwareBackButton) && event.getAction() == MotionEvent.ACTION_DOWN) {
+            float x = event.getX();
+            // If touch is on the left edge (where back gesture starts)
+            if (x < 50) {
+                return true; // Block the gesture
+            }
+        }
+        return false;
+    }
+
+    /**
      * Checks to see if it is possible to go forward one page in history, then does so.
      */
     private void goForward() {
@@ -1163,6 +1202,12 @@ public class InAppBrowser extends CordovaPlugin {
                 hadwareBackButton = hardwareBack.equals("yes") ? true : false;
             } else {
                 hadwareBackButton = DEFAULT_HARDWARE_BACK;
+            }
+            String gestures = features.get(GESTURES);
+            if (gestures != null) {
+                gesturesEnabled = gestures.equals("yes") ? true : false;
+            } else {
+                gesturesEnabled = true; // Default: gestures enabled
             }
             String mediaPlayback = features.get(MEDIA_PLAYBACK_REQUIRES_USER_ACTION);
             if (mediaPlayback != null) {
