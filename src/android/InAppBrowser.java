@@ -1370,8 +1370,8 @@ public class InAppBrowser extends CordovaPlugin {
                     close.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     close.getAdjustViewBounds();
 
-                       // Add padding
-                    close.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
+                    // Add padding
+                    close.setPadding(this.dpToPixels(12), this.dpToPixels(8), this.dpToPixels(12), this.dpToPixels(8));
                     
                     // Add gray background with border radius
                     android.graphics.drawable.GradientDrawable closeButtonShape = new android.graphics.drawable.GradientDrawable();
@@ -1402,10 +1402,11 @@ public class InAppBrowser extends CordovaPlugin {
                     _close = close;
                 }
 
-                RelativeLayout.LayoutParams closeLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
+                RelativeLayout.LayoutParams closeLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
                 // FORCES the header button to the LEFT, regardless of RTL settings
                 if (id == 2) { 
                     closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                    closeLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
                 } else { // All other buttons respect RTL settings
                     if (leftToRight) closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
                     else closeLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT);
@@ -1511,10 +1512,126 @@ public class InAppBrowser extends CordovaPlugin {
                 Resources activityRes = cordova.getActivity().getResources();
                 // Header close-like button (left) — similar to footer close button
                 if (showBackButton && showToolbar) {
-                    View headerClose = createCloseButton(2);
-                    // The button's position is now handled inside createCloseButton,
-                    // so we can just add it to the toolbar.
-                    toolbar.addView(headerClose);
+                    // Create a custom back button container with icon and Persian text
+                    LinearLayout backButtonContainer = new LinearLayout(cordova.getActivity());
+                    backButtonContainer.setOrientation(LinearLayout.HORIZONTAL);
+                    backButtonContainer.setGravity(Gravity.CENTER_VERTICAL);
+                    backButtonContainer.setPadding(this.dpToPixels(16), this.dpToPixels(8), this.dpToPixels(16), this.dpToPixels(8));
+                    
+                    // Add gray background with border radius
+                    android.graphics.drawable.GradientDrawable backButtonShape = new android.graphics.drawable.GradientDrawable();
+                    backButtonShape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+                    backButtonShape.setCornerRadius(this.dpToPixels(8));
+                    backButtonShape.setColor(Color.parseColor("#F0F0F0")); // Light gray background
+                    backButtonContainer.setBackground(backButtonShape);
+                    
+                    // Add click effect (darker on press)
+                    backButtonContainer.setOnTouchListener(new View.OnTouchListener() {
+                        @Override
+                        public boolean onTouch(View v, android.view.MotionEvent event) {
+                            switch (event.getAction()) {
+                                case android.view.MotionEvent.ACTION_DOWN:
+                                    // Darker color on press
+                                    backButtonShape.setColor(Color.parseColor("#D0D0D0"));
+                                    break;
+                                case android.view.MotionEvent.ACTION_UP:
+                                case android.view.MotionEvent.ACTION_CANCEL:
+                                    // Original color on release
+                                    backButtonShape.setColor(Color.parseColor("#F0F0F0"));
+                                    break;
+                            }
+                            return false; // Let the click listener handle the click
+                        }
+                    });
+                    
+                    // Add click listener to emit message event
+                    backButtonContainer.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            try {
+                                JSONObject obj = new JSONObject();
+                                obj.put("type", MESSAGE_EVENT);
+                                JSONObject data = new JSONObject();
+                                data.put("type", "toolbarback");
+                                obj.put("data", data);
+                                sendUpdate(obj, true);
+                            } catch (JSONException ex) {
+                                LOG.e(LOG_TAG, "Error sending toolbarback message: " + ex.getMessage());
+                            }
+                        }
+                    });
+                    
+                    // Add arrow icon
+                    ImageView arrowIcon = new ImageView(cordova.getActivity());
+                    Resources arrowActivityRes = cordova.getActivity().getResources();
+                    int closeResId = arrowActivityRes.getIdentifier("arrow_right", "drawable", cordova.getActivity().getPackageName());
+                    Drawable closeIcon = arrowActivityRes.getDrawable(closeResId);
+                    if (closeIcon != null) {
+                        arrowIcon.setImageDrawable(closeIcon);
+                        arrowIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                        arrowIcon.setColorFilter(Color.BLACK);
+                        
+                        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(
+                            this.dpToPixels(20), this.dpToPixels(20)
+                        );
+                        iconParams.setMargins(0, 0, this.dpToPixels(8), 0); // Right margin from icon to text
+                        arrowIcon.setLayoutParams(iconParams);
+                        backButtonContainer.addView(arrowIcon);
+                    }
+                    
+                    // Add Persian title "بازگشت به صفحه اصلی" inside the button
+                    TextView persianTitle = new TextView(cordova.getActivity());
+                    persianTitle.setText("بازگشت به صفحه اصلی");
+                    persianTitle.setTextColor(Color.BLACK);
+                    persianTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+                    persianTitle.setGravity(Gravity.CENTER_VERTICAL);
+                    
+                    // Try to load custom Persian font
+                    android.graphics.Typeface persianTypeface = null;
+                    try {
+                        // Try primary path first
+                        persianTypeface = android.graphics.Typeface.createFromAsset(
+                            cordova.getActivity().getAssets(),
+                            "public/font/IRANYekanX(Pro)/IRANYekanX family/IRANYekanX-Regular.ttf"
+                        );
+                    } catch (Exception ignored) {
+                        try {
+                            // Try Farsi numerals path
+                            persianTypeface = android.graphics.Typeface.createFromAsset(
+                                cordova.getActivity().getAssets(),
+                                "public/font/IRANYekanX(Pro)/Farsi numerals/IRANYekanXFaNum-Regular.ttf"
+                            );
+                        } catch (Exception ignored2) {
+                            try {
+                                // Try variable font path
+                                persianTypeface = android.graphics.Typeface.createFromAsset(
+                                    cordova.getActivity().getAssets(),
+                                    "public/font/IRANYekanX(Pro)/Variable Font/IRANYekanXVF.ttf"
+                                );
+                            } catch (Exception ignored3) {
+                                // Fallback to system font if custom font not available
+                            }
+                        }
+                    }
+                    
+                    if (persianTypeface != null) {
+                        persianTitle.setTypeface(persianTypeface);
+                    }
+                    
+                    // Add the Persian title to the button container
+                    backButtonContainer.addView(persianTitle);
+                    
+                    // Set layout parameters for the button container
+                    RelativeLayout.LayoutParams backButtonLayoutParams = new RelativeLayout.LayoutParams(
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT
+                    );
+                    backButtonLayoutParams.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+                    backButtonLayoutParams.addRule(RelativeLayout.CENTER_VERTICAL);
+                    backButtonContainer.setLayoutParams(backButtonLayoutParams);
+                    backButtonContainer.setId(Integer.valueOf(2));
+                    backButtonContainer.setContentDescription("Back Button");
+                    
+                    toolbar.addView(backButtonContainer);
                 }
 
                 // Edit Text Box (centered)
@@ -1522,7 +1639,8 @@ public class InAppBrowser extends CordovaPlugin {
                 RelativeLayout.LayoutParams textLayoutParams = new RelativeLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
                 textLayoutParams.addRule(RelativeLayout.CENTER_IN_PARENT);
                 // Reserve space on left and right so text is centered without overlapping buttons
-                textLayoutParams.setMargins(this.dpToPixels(72), 0, this.dpToPixels(72), 0);
+                // Adjusted left margin to accommodate the new back button with Persian text
+                textLayoutParams.setMargins(this.dpToPixels(180), 0, this.dpToPixels(72), 0);
                 edittext.setLayoutParams(textLayoutParams);
                 edittext.setId(Integer.valueOf(4));
                 edittext.setSingleLine(true);
