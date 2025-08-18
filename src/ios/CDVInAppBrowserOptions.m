@@ -49,6 +49,16 @@
         self.footertitle = nil;
         self.injectbutton = NO;
         self.menu = NO;
+        
+        // New defaults for Android parity
+        self.showurl = NO;
+        self.navigationbuttons = NO;
+        self.backbutton = YES;
+        self.gestures = YES;
+        self.hardwareback = YES; // no-op on iOS, kept for parity
+        self.toolbarheight = nil; // use default when nil
+        self.footerheight = nil;  // use default when nil
+        self.footercolor = nil;
     }
 
     return self;
