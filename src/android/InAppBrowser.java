@@ -1147,11 +1147,20 @@ public class InAppBrowser extends CordovaPlugin {
                 textView.getContentDescription() != null && 
                 textView.getContentDescription().toString().equals("Close Button")) {
                 
-                // Only show "Back" if we can actually go back and we're not on the initial page
+                // Always show "Close" initially, then check navigation state
                 String newText = "Close";
-                if (inAppWebView != null && inAppWebView.canGoBack() && inAppWebView.getUrl() != null && !inAppWebView.getUrl().equals("about:blank")) {
+                
+                // Only show "Back" if we can actually go back and we're not on the initial page
+                // Also ensure the WebView is properly initialized and has loaded content
+                if (inAppWebView != null && 
+                    inAppWebView.canGoBack() && 
+                    inAppWebView.getUrl() != null && 
+                    !inAppWebView.getUrl().equals("about:blank") &&
+                    !inAppWebView.getUrl().equals("") &&
+                    inAppWebView.getProgress() == 100) { // Ensure page is fully loaded
                     newText = "Back";
                 }
+                
                 textView.setText(newText);
             }
         }
@@ -1174,6 +1183,18 @@ public class InAppBrowser extends CordovaPlugin {
         showZoomControls = true;
         openWindowHidden = false;
         mediaPlaybackRequiresUserGesture = false;
+        // Reset stateful options to avoid leaking across sessions
+        closeButtonCaption = "";
+        closeButtonColor = "";
+        navigationButtonColor = "";
+        footerColor = "";
+        footerTitle = "";
+        showInjectButton = false;
+        showMenuButton = false;
+        toolbarColor = android.graphics.Color.LTGRAY;
+        toolbarHeightDp = TOOLBAR_HEIGHT;
+        footerHeightDp = FOOTER_HEIGHT;
+        showFooter = false;
 
         if (features != null) {
             // New feature flags
@@ -1324,12 +1345,12 @@ public class InAppBrowser extends CordovaPlugin {
                 // Initially show "Close", then check if we can go back after page loads
                 String buttonText = "Close";
 
-                if (closeButtonCaption != "") {
+                if (closeButtonCaption != null && !closeButtonCaption.isEmpty()) {
                     // Use TextView for text
                     TextView close = new TextView(cordova.getActivity());
                     close.setText(buttonText);
                     close.setTextSize(20);
-                    if (closeButtonColor != "") close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
+                    if (closeButtonColor != null && !closeButtonColor.isEmpty()) close.setTextColor(android.graphics.Color.parseColor(closeButtonColor));
                     close.setGravity(android.view.Gravity.CENTER_VERTICAL);
                     close.setPadding(this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12), this.dpToPixels(12));
                     
@@ -1365,7 +1386,7 @@ public class InAppBrowser extends CordovaPlugin {
                     ImageButton close = new ImageButton(cordova.getActivity());
                     int closeResId = activityRes.getIdentifier("arrow_right", "drawable", cordova.getActivity().getPackageName());
                     Drawable closeIcon = activityRes.getDrawable(closeResId);
-                    if (closeButtonColor != "") close.setColorFilter(android.graphics.Color.parseColor(closeButtonColor));
+                    if (closeButtonColor != null && !closeButtonColor.isEmpty()) close.setColorFilter(android.graphics.Color.parseColor(closeButtonColor));
                     close.setImageDrawable(closeIcon);
                     close.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     close.getAdjustViewBounds();
@@ -1447,7 +1468,13 @@ public class InAppBrowser extends CordovaPlugin {
                 // CB-6702 InAppBrowser hangs when opening more than one instance
                 if (dialog != null) {
                     dialog.dismiss();
-                };
+                }
+                
+                // Reset WebView state for new session
+                if (inAppWebView != null) {
+                    inAppWebView.clearHistory();
+                    inAppWebView.clearCache(true);
+                }
 
                                 // Let's create the main dialog
                 dialog = new InAppBrowserDialog(cordova.getActivity(), android.R.style.Theme_NoTitleBar_Fullscreen);
@@ -1665,7 +1692,7 @@ public class InAppBrowser extends CordovaPlugin {
                 // Footer
                 RelativeLayout footer = new RelativeLayout(cordova.getActivity());
                 int _footerColor;
-                if(footerColor != "") {
+                if(footerColor != null && !footerColor.isEmpty()) {
                     _footerColor = Color.parseColor(footerColor);
                 } else {
                     _footerColor = android.graphics.Color.LTGRAY;
@@ -2039,6 +2066,9 @@ public class InAppBrowser extends CordovaPlugin {
                 // Load the URL after the WebView is properly added to the layout
                 inAppWebView.loadUrl(url);
 
+                // Reset close button text to initial state
+                updateCloseButtonText();
+
                 // Don't add the footer unless it's been enabled
                 if (showFooter) {
                     main.addView(footer);
@@ -2061,6 +2091,14 @@ public class InAppBrowser extends CordovaPlugin {
                             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                         );
                     }
+                    
+                    // Force update close button text after dialog is shown
+                    dialog.getWindow().getDecorView().post(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateCloseButtonText();
+                        }
+                    });
                 }
                 // the goal of openhidden is to load the url and not display it
                 // Show() needs to be called to cause the URL to be loaded
@@ -2402,8 +2440,13 @@ public class InAppBrowser extends CordovaPlugin {
             view.clearFocus();
             view.requestFocus();
 
-            // Update close button text based on navigation state
-            updateCloseButtonText();
+            // Small delay to ensure WebView state is fully updated before updating button text
+            view.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    updateCloseButtonText();
+                }
+            }, 100);
 
             try {
                 JSONObject obj = new JSONObject();
