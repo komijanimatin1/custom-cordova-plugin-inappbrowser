@@ -32,10 +32,27 @@
 }
 
 - (CGRect) invertFrameIfNeeded:(CGRect)rect {
-    if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
-        CGFloat temp = rect.size.width;
-        rect.size.width = rect.size.height;
-        rect.size.height = temp;
+    // Use modern iOS 13+ approach for orientation detection
+    if (@available(iOS 13.0, *)) {
+        UIWindowScene *windowScene = UIApplication.sharedApplication.connectedScenes.allObjects.firstObject;
+        if ([windowScene isKindOfClass:[UIWindowScene class]]) {
+            if (windowScene.interfaceOrientation == UIInterfaceOrientationLandscapeLeft || 
+                windowScene.interfaceOrientation == UIInterfaceOrientationLandscapeRight) {
+                CGFloat temp = rect.size.width;
+                rect.size.width = rect.size.height;
+                rect.size.height = temp;
+            }
+        }
+    } else {
+        // Fallback for iOS 12 and below
+        #pragma clang diagnostic push
+        #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+        if (UIInterfaceOrientationIsLandscape([[UIApplication sharedApplication] statusBarOrientation])) {
+            CGFloat temp = rect.size.width;
+            rect.size.width = rect.size.height;
+            rect.size.height = temp;
+        }
+        #pragma clang diagnostic pop
     }
     rect.origin = CGPointZero;
     return rect;
