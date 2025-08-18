@@ -53,7 +53,7 @@
 // New options for feature parity with Android
 @property (nonatomic, assign) BOOL showurl;               // show/hide URL label (address bar)
 @property (nonatomic, assign) BOOL navigationbuttons;     // show/hide navigation buttons (not currently surfaced)
-@property (nonatomic, assign) BOOL backbutton;            // show/hide back/close button in footer toolbar
+@property (nonatomic, assign) BOOL backbutton;            // show/hide back/close button in footer or header toolbar
 @property (nonatomic, assign) BOOL gestures;              // enable/disable back-forward swipe gestures
 @property (nonatomic, assign) BOOL hardwareback;          // placeholder for parity; no-op on iOS
 @property (nonatomic, strong) NSNumber* toolbarheight;    // toolbar height in points
