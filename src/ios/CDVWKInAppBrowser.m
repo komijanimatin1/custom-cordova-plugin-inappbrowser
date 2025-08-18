@@ -45,7 +45,7 @@
 
 #define    IAB_BRIDGE_NAME @"cordova_iab"
 
-#define    TOOLBAR_HEIGHT 120.0
+#define    TOOLBAR_HEIGHT 64.0
 #define    LOCATIONBAR_HEIGHT 21.0
 #define    FOOTER_HEIGHT ((TOOLBAR_HEIGHT) + (LOCATIONBAR_HEIGHT))
 
@@ -962,7 +962,7 @@ BOOL isExiting = FALSE;
     [self.AIButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     self.AIButton.layer.cornerRadius = 8.0f;
     self.AIButton.layer.masksToBounds = YES;
-    self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16); // Match Android padding exactly
+            self.AIButton.contentEdgeInsets = UIEdgeInsetsMake(8, 12, 8, 12); // tighter padding
     self.AIButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size exactly
     [self.AIButton setTitle:@"AI" forState:UIControlStateNormal];
     [self.AIButton addTarget:self action:@selector(injectScript) forControlEvents:UIControlEventTouchUpInside];
@@ -976,7 +976,7 @@ BOOL isExiting = FALSE;
     [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     self.menuButton.layer.cornerRadius = 8.0f;
     self.menuButton.layer.masksToBounds = YES;
-    self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(12, 12, 12, 12); // Match Android padding exactly
+            self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8); // tighter padding
     self.menuButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size exactly
     [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal]; // Three dots
     [self.menuButton addTarget:self action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
@@ -998,7 +998,7 @@ BOOL isExiting = FALSE;
         self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
         self.closeButton.layer.cornerRadius = 8.0f;
         self.closeButton.layer.masksToBounds = YES;
-        self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(12, 16, 12, 16);
+        self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(6, 12, 6, 12);
         
         // Use right arrow icon like Android and also allow caption
         UIImage *rightArrowImage = [UIImage systemImageNamed:@"chevron.right"];
