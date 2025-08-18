@@ -483,16 +483,7 @@ static CDVWKInAppBrowser* instance = nil;
 
 
 
-// Add injectMockMessageScript method for testing
-- (void)injectMockMessageScript:(CDVInvokedUrlCommand*)command
-{
-    NSString* mockScript = @"(function(){setTimeout(()=>{try{const mockMessage={origin:'mizBunnyApp',type:'login_success',data:{_id:'508216cd-4ddf-4036-a08d-6f1c8e05fe2b',username:'hamidqasemy',email:'ghasemi1992@gmail.com',name:'حمید',lastName:'قاسمی',phoneNumber:'09384328756',roles:['superAdmin'],refreshToken:'mock-refresh-token'}};console.log('[Mock] sending mock message',mockMessage);if(window.cordova&&window.cordova.exec){window.cordova.exec(null,null,'InAppBrowser','postMessage',[JSON.stringify(mockMessage)]);}else if(window.cordova_iab&&window.cordova_iab.postMessage){window.cordova_iab.postMessage(JSON.stringify(mockMessage));}else if(window.parent&&window.parent.postMessage){window.parent.postMessage(mockMessage,'*');}else if(window.dispatchEvent){const e=new MessageEvent('message',{data:mockMessage});window.dispatchEvent(e);}}catch(err){console.error('[Mock] failed to post message',err);}},5000);})();";
-    
-    [self evaluateJavaScript:mockScript];
-    
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-}
+
 
 - (BOOL)isValidCallbackId:(NSString *)callbackId
 {
