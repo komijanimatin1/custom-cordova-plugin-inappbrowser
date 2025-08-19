@@ -138,7 +138,17 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String TOOLBAR_HEIGHT_OPTION = "toolbarheight";
     private static final String FOOTER_HEIGHT_OPTION = "footerheight";
 
-    private static final List customizableOptions = Arrays.asList(CLOSE_BUTTON_CAPTION, TOOLBAR_COLOR, NAVIGATION_COLOR, CLOSE_BUTTON_COLOR, FOOTER_COLOR, FOOTER_TITLE);
+    private static final List customizableOptions = Arrays.asList(
+        CLOSE_BUTTON_CAPTION,
+        TOOLBAR_COLOR,
+        NAVIGATION_COLOR,
+        CLOSE_BUTTON_COLOR,
+        FOOTER_COLOR,
+        FOOTER_TITLE,
+        TOOLBAR_HEIGHT_OPTION,
+        FOOTER_HEIGHT_OPTION,
+        INJECT_JS_CODE
+    );
 
     private InAppBrowserDialog dialog;
     private WebView inAppWebView;
@@ -2040,7 +2050,14 @@ public class InAppBrowser extends CordovaPlugin {
                     LayoutParams.MATCH_PARENT,
                     LayoutParams.MATCH_PARENT
                 );
-                containerParams.setMargins(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                // Add safe-area inset at top when toolbar is hidden to avoid camera cutout overlap
+                int additionalTopInset = showToolbar ? 0 : statusBarHeight;
+                containerParams.setMargins(
+                    this.dpToPixels(16),
+                    this.dpToPixels(16) + additionalTopInset,
+                    this.dpToPixels(16),
+                    this.dpToPixels(16)
+                );
                 webViewContainer.setLayoutParams(containerParams);
                 
                 // Set layout parameters for the WebView to fill the container
