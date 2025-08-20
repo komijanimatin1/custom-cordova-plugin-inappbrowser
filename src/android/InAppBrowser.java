@@ -1462,9 +1462,15 @@ public class InAppBrowser extends CordovaPlugin {
                                 LOG.e(LOG_TAG, "Error sending toolbarback message: " + ex.getMessage());
                             }
                         }
-                        // All other close buttons (like footer, ID 7) will just close the dialog
+                        // Footer close button (e.g., ID 7): behave like browser back, then close if no history
                         else {
-                            closeDialog();
+                            if (inAppWebView != null && inAppWebView.canGoBack()) {
+                                inAppWebView.goBack();
+                                // Update the button label to reflect current navigation state
+                                updateCloseButtonText();
+                            } else {
+                                closeDialog();
+                            }
                         }
                     }
                 });
