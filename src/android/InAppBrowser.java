@@ -1687,6 +1687,7 @@ public class InAppBrowser extends CordovaPlugin {
                 edittext.setLayoutParams(textLayoutParams);
                 edittext.setId(Integer.valueOf(4));
                 edittext.setSingleLine(true);
+                edittext.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
                 edittext.setText(url);
                 edittext.setInputType(InputType.TYPE_TEXT_VARIATION_URI);
                 edittext.setImeOptions(EditorInfo.IME_ACTION_GO);
@@ -1878,7 +1879,7 @@ public class InAppBrowser extends CordovaPlugin {
                     TextView footerText = new TextView(cordova.getActivity());
                     footerText.setText(footerTitle);
                     footerText.setTextColor(Color.BLACK);
-                    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+                    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
                     footerText.setGravity(Gravity.CENTER);
                     // Apply custom font if present in assets/public
                     android.graphics.Typeface footerTypeface = loadCustomFooterTypeface();
