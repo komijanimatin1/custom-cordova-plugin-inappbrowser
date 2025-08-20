@@ -1879,7 +1879,7 @@ public class InAppBrowser extends CordovaPlugin {
                     TextView footerText = new TextView(cordova.getActivity());
                     footerText.setText(footerTitle);
                     footerText.setTextColor(Color.BLACK);
-                    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+                    footerText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
                     footerText.setGravity(Gravity.CENTER);
                     // Apply custom font if present in assets/public
                     android.graphics.Typeface footerTypeface = loadCustomFooterTypeface();
