@@ -133,7 +133,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String NAVIGATION_BUTTONS = "navigationbuttons";
     private static final String BACK_BUTTON = "backbutton";
 
-    private static final int TOOLBAR_HEIGHT = 110; // default toolbar height (dp)
+    private static final int TOOLBAR_HEIGHT = 64; // default toolbar height (dp) — reduced to match iOS header spacing
     private static final int FOOTER_HEIGHT = 120; // default footer height (dp)
     private static final String TOOLBAR_HEIGHT_OPTION = "toolbarheight";
     private static final String FOOTER_HEIGHT_OPTION = "footerheight";
@@ -1541,7 +1541,9 @@ public class InAppBrowser extends CordovaPlugin {
                 if (resourceId > 0) {
                     statusBarHeight = cordova.getActivity().getResources().getDimensionPixelSize(resourceId);
                 }
-                toolbarLP.setMargins(0, statusBarHeight, 0, 0);
+                // Reduce top margin to decrease space between web view and back button (like iOS)
+                // Slightly reduce the top margin so the toolbar sits closer to the webview
+                toolbarLP.setMargins(0, statusBarHeight - dpToPixels(4), 0, 0);
 
                 toolbar.setLayoutParams(toolbarLP);
                 // These gravity settings were likely overriding the button's layout params. Removing them.
@@ -1559,7 +1561,8 @@ public class InAppBrowser extends CordovaPlugin {
                     LinearLayout backButtonContainer = new LinearLayout(cordova.getActivity());
                     backButtonContainer.setOrientation(LinearLayout.HORIZONTAL);
                     backButtonContainer.setGravity(Gravity.CENTER_VERTICAL);
-                    backButtonContainer.setPadding(this.dpToPixels(16), this.dpToPixels(8), this.dpToPixels(16), this.dpToPixels(8));
+                    // Reduce vertical padding to decrease the space below the back button
+                    backButtonContainer.setPadding(this.dpToPixels(16), this.dpToPixels(4), this.dpToPixels(16), this.dpToPixels(4));
                     
                     // Add gray background with border radius
                     android.graphics.drawable.GradientDrawable backButtonShape = new android.graphics.drawable.GradientDrawable();
@@ -1717,7 +1720,9 @@ public class InAppBrowser extends CordovaPlugin {
                 footer.setBackgroundColor(_footerColor);
                 LinearLayout.LayoutParams footerLayout = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, this.dpToPixels(footerHeightDp));
                 footer.setLayoutParams(footerLayout);
-                footer.setPadding(this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16), this.dpToPixels(16));
+                // Increase bottom padding to create more space between footer and bottom of screen (like iOS)
+                // Increase top margin to 8
+                footer.setPadding(this.dpToPixels(16), this.dpToPixels(8), this.dpToPixels(16), this.dpToPixels(24));
 
                 // Create horizontal layout for footer content (like flex-direction: row)
                 LinearLayout footerContent = new LinearLayout(cordova.getActivity());
@@ -2058,10 +2063,11 @@ public class InAppBrowser extends CordovaPlugin {
                     LayoutParams.MATCH_PARENT
                 );
                 // Add safe-area inset at top when toolbar is hidden to avoid camera cutout overlap
+                // Reduce top margin to decrease space between web view and back button (like iOS)
                 int additionalTopInset = showToolbar ? 0 : statusBarHeight;
                 containerParams.setMargins(
                     this.dpToPixels(16),
-                    this.dpToPixels(16) + additionalTopInset,
+                    this.dpToPixels(8) + additionalTopInset, // Reduced from 16 to 8 to match iOS spacing
                     this.dpToPixels(16),
                     this.dpToPixels(16)
                 );
@@ -2082,7 +2088,7 @@ public class InAppBrowser extends CordovaPlugin {
                 
                 LinearLayout.LayoutParams webViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0);
                 webViewLayoutParams.weight = 1; // This makes the webViewLayout take remaining space
-                // Add top margin to avoid camera punch - increased for better clearance
+                // Add top margin to avoid camera punch - reduced for better clearance like iOS
                 webViewLayoutParams.setMargins(0, 0, 0, 0);
                 webViewLayout.setLayoutParams(webViewLayoutParams);
                 main.addView(webViewLayout);
@@ -2096,6 +2102,15 @@ public class InAppBrowser extends CordovaPlugin {
                 // Don't add the footer unless it's been enabled
                 if (showFooter) {
                     main.addView(footer);
+                    
+                    // Add bottom margin to create more space between footer and bottom of screen (like iOS)
+                    View bottomSpacer = new View(cordova.getActivity());
+                    LinearLayout.LayoutParams spacerParams = new LinearLayout.LayoutParams(
+                        LayoutParams.MATCH_PARENT,
+                        this.dpToPixels(16) // 16dp additional bottom spacing
+                    );
+                    bottomSpacer.setLayoutParams(spacerParams);
+                    main.addView(bottomSpacer);
                 }
 
                 WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
