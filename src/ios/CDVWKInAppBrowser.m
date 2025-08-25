@@ -970,15 +970,41 @@ BOOL isExiting = FALSE;
     [self.AIButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
     [self.toolbar addSubview:self.AIButton];
 
-    // Create three-dot menu button
+    // Create menu button using SF Symbol (fallback to asset) to match close button sizing
     self.menuButton = [UIButton buttonWithType:UIButtonTypeSystem];
     self.menuButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android exactly
-    [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
     self.menuButton.layer.cornerRadius = 8.0f;
     self.menuButton.layer.masksToBounds = YES;
-            self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8); // tighter padding
-    self.menuButton.titleLabel.font = [UIFont systemFontOfSize:14.0]; // Match Android text size exactly
-    [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal]; // Three dots
+    self.menuButton.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8); // tighter padding
+    // Use SF Symbol for ellipsis; configure point size similar to close icon
+    if (@available(iOS 13.0, *)) {
+        UIImageSymbolConfiguration *symConfig = [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightRegular];
+                    UIImage *menuImage = [UIImage systemImageNamed:@"line.3.vertical" withConfiguration:symConfig];
+        if (menuImage == nil) {
+            menuImage = [UIImage systemImageNamed:@"ellipsis.vertical" withConfiguration:symConfig];
+        }
+        // Do not fall back to circled variant — prefer plain vertical glyph or text fallback
+        if (menuImage != nil) {
+            [self.menuButton setImage:menuImage forState:UIControlStateNormal];
+            self.menuButton.tintColor = [UIColor blackColor];
+        } else {
+            // fallback to plain vertical dots glyph as text
+            [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal];
+            [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+            // ensure font size for text fallback
+            self.menuButton.titleLabel.font = [UIFont systemFontOfSize:22.0];
+        }
+    } else {
+        // Older iOS fallback to asset named "menu_icon"
+        UIImage *menuImg = [UIImage imageNamed:@"menu_icon"];
+        if (menuImg != nil) {
+            [self.menuButton setImage:menuImg forState:UIControlStateNormal];
+            self.menuButton.tintColor = [UIColor blackColor];
+        } else {
+            [self.menuButton setTitle:@"⋮" forState:UIControlStateNormal];
+            [self.menuButton setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        }
+    }
     [self.menuButton addTarget:self action:@selector(showMenu) forControlEvents:UIControlEventTouchUpInside];
     [self.menuButton addTarget:self action:@selector(buttonTouchDown:) forControlEvents:UIControlEventTouchDown];
     [self.menuButton addTarget:self action:@selector(buttonTouchUp:) forControlEvents:UIControlEventTouchUpInside | UIControlEventTouchUpOutside];
@@ -987,7 +1013,17 @@ BOOL isExiting = FALSE;
     self.footerTitleLabel = [[UILabel alloc] init];
     self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
     self.footerTitleLabel.textColor = [UIColor blackColor];
-    self.footerTitleLabel.font = [UIFont systemFontOfSize:12.0]; // Match Android footer title size (12pt)
+    // Attempt to use IRANYekanX family, fallback to system font
+    UIFont *customFont = [UIFont fontWithName:@"IRANYekanX" size:12.0];
+    if (customFont == nil) {
+        customFont = [UIFont fontWithName:@"IRANYekanXVF" size:12.0];
+    }
+    if (customFont == nil) {
+        customFont = [UIFont systemFontOfSize:12.0];
+    }
+    self.footerTitleLabel.font = customFont;
+    self.footerTitleLabel.adjustsFontSizeToFitWidth = YES;
+    self.footerTitleLabel.minimumScaleFactor = 0.8;
     [self.toolbar addSubview:self.footerTitleLabel];
 
     // Honor backbutton flag (default YES)
@@ -998,17 +1034,26 @@ BOOL isExiting = FALSE;
         self.closeButton.backgroundColor = [UIColor colorWithHexString:@"#F0F0F0"]; // Light gray to match Android
         self.closeButton.layer.cornerRadius = 8.0f;
         self.closeButton.layer.masksToBounds = YES;
-        self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(6, 12, 6, 12);
+        self.closeButton.contentEdgeInsets = UIEdgeInsetsMake(8, 8, 8, 8);
         
         // Use right arrow icon like Android and also allow caption
-        UIImage *rightArrowImage = [UIImage systemImageNamed:@"chevron.right"];
-        if (rightArrowImage == nil) {
-            // Fallback for older iOS versions
-            rightArrowImage = [UIImage imageNamed:@"arrow_right"];
-        }
-        if (rightArrowImage != nil) {
-            [self.closeButton setImage:rightArrowImage forState:UIControlStateNormal];
-            self.closeButton.tintColor = [UIColor blackColor];
+        if (@available(iOS 13.0, *)) {
+            UIImageSymbolConfiguration *symConfig = [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightRegular];
+            UIImage *rightArrowImage = [UIImage systemImageNamed:@"chevron.right" withConfiguration:symConfig];
+            if (rightArrowImage == nil) {
+                // Fallback for older iOS versions
+                rightArrowImage = [UIImage imageNamed:@"arrow_right"];
+            }
+            if (rightArrowImage != nil) {
+                [self.closeButton setImage:rightArrowImage forState:UIControlStateNormal];
+                self.closeButton.tintColor = [UIColor blackColor];
+            }
+        } else {
+            UIImage *rightArrowImage = [UIImage imageNamed:@"arrow_right"];
+            if (rightArrowImage != nil) {
+                [self.closeButton setImage:rightArrowImage forState:UIControlStateNormal];
+                self.closeButton.tintColor = [UIColor blackColor];
+            }
         }
         
         // If a caption was provided, show it with proper spacing
@@ -1653,20 +1698,27 @@ BOOL isExiting = FALSE;
         }
 
         // Position title in center with balanced spacing (matches Android layout exactly)
-        // Android uses 16dp footer padding, so we use 16pt spacing from buttons
-        CGFloat titleLabelX;
+        // Calculate the center position for the title
+        CGFloat leftEdge = 16.0; // Left margin
+        CGFloat rightEdge = self.view.bounds.size.width - 16.0; // Right margin
+        
         if (browserOptions.menu && !self.menuButton.hidden) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group
+            leftEdge = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from menu button
         } else {
-            // Use AI button as left anchor when menu is hidden
-            titleLabelX = CGRectGetMaxX(self.AIButton.frame) + 16; // 16pt spacing from left button
+            leftEdge = CGRectGetMaxX(self.AIButton.frame) + 16; // 16pt spacing from AI button
         }
-        CGFloat rightEdge = (browserOptions.backbutton && self.closeButton != nil) ? CGRectGetMinX(self.closeButton.frame) : self.view.bounds.size.width;
-        CGFloat titleLabelWidth = rightEdge - titleLabelX - 16; // 16pt spacing from right edge/button
+        
+        if (browserOptions.backbutton && self.closeButton != nil) {
+            rightEdge = CGRectGetMinX(self.closeButton.frame) - 16; // 16pt spacing from close button
+        }
+        
+        CGFloat titleLabelWidth = rightEdge - leftEdge;
         if (titleLabelWidth < 0) {
             titleLabelWidth = 0; // prevent negative width
         }
-        self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
+        
+        // Center the title within the available space
+        self.footerTitleLabel.frame = CGRectMake(leftEdge, 0, titleLabelWidth, footerHeight);
     } else {
         // Standard toolbar positioning (when footer is disabled)
         CGRect viewBounds = self.view.bounds;
