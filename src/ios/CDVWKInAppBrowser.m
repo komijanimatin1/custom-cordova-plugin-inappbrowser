@@ -1611,21 +1611,27 @@ BOOL isExiting = FALSE;
         }
         
         // Position buttons and title in footer with exact Android spacing
-        [self.AIButton sizeToFit];
-        CGRect aiButtonFrame = self.AIButton.frame;
-        aiButtonFrame.origin.x = 16; // 16pt padding from left edge (matches Android)
-        aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
-        self.AIButton.frame = aiButtonFrame;
-
-        // Position menu button if enabled - group with AI button on left side
         if (browserOptions.menu) {
+            // Place menu button flush-left, then AI button to its right
             [self.menuButton sizeToFit];
             CGRect menuButtonFrame = self.menuButton.frame;
-            menuButtonFrame.origin.x = CGRectGetMaxX(aiButtonFrame) + 8; // 8pt spacing between left buttons (matches Android)
+            menuButtonFrame.origin.x = 16; // flush left
             menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
             self.menuButton.frame = menuButtonFrame;
             self.menuButton.hidden = NO;
+
+            [self.AIButton sizeToFit];
+            CGRect aiButtonFrame = self.AIButton.frame;
+            aiButtonFrame.origin.x = CGRectGetMaxX(menuButtonFrame) + 8; // 8pt spacing
+            aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+            self.AIButton.frame = aiButtonFrame;
         } else {
+            // No menu: place AI at leftmost
+            [self.AIButton sizeToFit];
+            CGRect aiButtonFrame = self.AIButton.frame;
+            aiButtonFrame.origin.x = 16;
+            aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+            self.AIButton.frame = aiButtonFrame;
             self.menuButton.hidden = YES;
         }
 
@@ -1641,15 +1647,18 @@ BOOL isExiting = FALSE;
         // Position title in center with balanced spacing (matches Android layout exactly)
         // Android uses 16dp footer padding, so we use 16pt spacing from buttons
         CGFloat titleLabelX;
-        if (browserOptions.menu) {
-            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group (matches Android 16dp)
+        if (browserOptions.menu && !self.menuButton.hidden) {
+            titleLabelX = CGRectGetMaxX(self.menuButton.frame) + 16; // 16pt spacing from left button group
         } else {
-            titleLabelX = CGRectGetMaxX(aiButtonFrame) + 16; // 16pt spacing from left button (matches Android 16dp)
+            // Use AI button as left anchor when menu is hidden
+            titleLabelX = CGRectGetMaxX(self.AIButton.frame) + 16; // 16pt spacing from left button
         }
-        CGFloat rightEdge = browserOptions.backbutton && self.closeButton != nil ? CGRectGetMinX(self.closeButton.frame) : self.view.bounds.size.width;
+        CGFloat rightEdge = (browserOptions.backbutton && self.closeButton != nil) ? CGRectGetMinX(self.closeButton.frame) : self.view.bounds.size.width;
         CGFloat titleLabelWidth = rightEdge - titleLabelX - 16; // 16pt spacing from right edge/button
+        if (titleLabelWidth < 0) {
+            titleLabelWidth = 0; // prevent negative width
+        }
         self.footerTitleLabel.frame = CGRectMake(titleLabelX, 0, titleLabelWidth, footerHeight);
-        
     } else {
         // Standard toolbar positioning (when footer is disabled)
         CGRect viewBounds = self.view.bounds;
