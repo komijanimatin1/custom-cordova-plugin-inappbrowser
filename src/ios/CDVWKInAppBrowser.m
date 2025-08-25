@@ -987,7 +987,7 @@ BOOL isExiting = FALSE;
     self.footerTitleLabel = [[UILabel alloc] init];
     self.footerTitleLabel.textAlignment = NSTextAlignmentCenter;
     self.footerTitleLabel.textColor = [UIColor blackColor];
-    self.footerTitleLabel.font = [UIFont systemFontOfSize:28.0]; // Match Android text size exactly
+    self.footerTitleLabel.font = [UIFont systemFontOfSize:12.0]; // Match Android footer title size (12pt)
     [self.toolbar addSubview:self.footerTitleLabel];
 
     // Honor backbutton flag (default YES)
@@ -1611,36 +1611,44 @@ BOOL isExiting = FALSE;
         }
         
         // Position buttons and title in footer with exact Android spacing
+        CGFloat footerTopPadding = 8.0;   // match Android top padding
+        CGFloat footerBottomPadding = 24.0; // match Android bottom padding
+
         if (browserOptions.menu) {
             // Place menu button flush-left, then AI button to its right
             [self.menuButton sizeToFit];
             CGRect menuButtonFrame = self.menuButton.frame;
             menuButtonFrame.origin.x = 16; // flush left
-            menuButtonFrame.origin.y = (footerHeight - menuButtonFrame.size.height) / 2;
+            // Vertical center inside the padded area
+            CGFloat menuAvailableHeight = footerHeight - footerTopPadding - footerBottomPadding;
+            menuButtonFrame.origin.y = footerTopPadding + (menuAvailableHeight - menuButtonFrame.size.height) / 2;
             self.menuButton.frame = menuButtonFrame;
             self.menuButton.hidden = NO;
 
             [self.AIButton sizeToFit];
             CGRect aiButtonFrame = self.AIButton.frame;
             aiButtonFrame.origin.x = CGRectGetMaxX(menuButtonFrame) + 8; // 8pt spacing
-            aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+            CGFloat aiAvailableHeight = footerHeight - footerTopPadding - footerBottomPadding;
+            aiButtonFrame.origin.y = footerTopPadding + (aiAvailableHeight - aiButtonFrame.size.height) / 2;
             self.AIButton.frame = aiButtonFrame;
         } else {
             // No menu: place AI at leftmost
             [self.AIButton sizeToFit];
             CGRect aiButtonFrame = self.AIButton.frame;
             aiButtonFrame.origin.x = 16;
-            aiButtonFrame.origin.y = (footerHeight - aiButtonFrame.size.height) / 2;
+            CGFloat aiAvailableHeight = footerHeight - footerTopPadding - footerBottomPadding;
+            aiButtonFrame.origin.y = footerTopPadding + (aiAvailableHeight - aiButtonFrame.size.height) / 2;
             self.AIButton.frame = aiButtonFrame;
             self.menuButton.hidden = YES;
         }
 
-        // Position close button at far right with 16pt padding (matches Android)
+        // Ensure close button is vertically aligned within the padded area as well
         if (browserOptions.backbutton && self.closeButton != nil) {
             [self.closeButton sizeToFit];
             CGRect closeButtonFrame = self.closeButton.frame;
             closeButtonFrame.origin.x = self.view.bounds.size.width - closeButtonFrame.size.width - 16;
-            closeButtonFrame.origin.y = (footerHeight - closeButtonFrame.size.height) / 2;
+            CGFloat closeAvailableHeight = footerHeight - footerTopPadding - footerBottomPadding;
+            closeButtonFrame.origin.y = footerTopPadding + (closeAvailableHeight - closeButtonFrame.size.height) / 2;
             self.closeButton.frame = closeButtonFrame;
         }
 
