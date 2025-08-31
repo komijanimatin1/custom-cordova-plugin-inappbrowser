@@ -1458,17 +1458,12 @@ public class InAppBrowser extends CordovaPlugin {
                 _close.setId(Integer.valueOf(id));
                 _close.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        // Toolbar back button (ID 2): emit a message event to host app
+                        // Toolbar back button (ID 2): close the InAppBrowser directly
                         if (v.getId() == Integer.valueOf(2)) {
                             try {
-                                JSONObject obj = new JSONObject();
-                                obj.put("type", MESSAGE_EVENT);
-                                JSONObject data = new JSONObject();
-                                data.put("type", "toolbarback");
-                                obj.put("data", data);
-                                sendUpdate(obj, true);
-                            } catch (JSONException ex) {
-                                LOG.e(LOG_TAG, "Error sending toolbarback message: " + ex.getMessage());
+                                closeDialog();
+                            } catch (Exception ex) {
+                                LOG.e(LOG_TAG, "Error closing InAppBrowser from toolbar back: " + ex.getMessage());
                             }
                         }
                         // Footer close button (e.g., ID 7): behave like browser back, then close if no history
@@ -1599,18 +1594,15 @@ public class InAppBrowser extends CordovaPlugin {
                         }
                     });
                     
-                    // Add click listener to emit message event
+                    // Add click listener to close the InAppBrowser directly instead of emitting a message.
+                    // This prevents the app from receiving a toolbar/back postMessage and relies on the
+                    // existing 'exit' / 'backbutton' events to notify the app that the browser closed.
                     backButtonContainer.setOnClickListener(new View.OnClickListener() {
                         public void onClick(View v) {
                             try {
-                                JSONObject obj = new JSONObject();
-                                obj.put("type", MESSAGE_EVENT);
-                                JSONObject data = new JSONObject();
-                                data.put("type", "toolbarback");
-                                obj.put("data", data);
-                                sendUpdate(obj, true);
-                            } catch (JSONException ex) {
-                                LOG.e(LOG_TAG, "Error sending toolbarback message: " + ex.getMessage());
+                                closeDialog();
+                            } catch (Exception ex) {
+                                LOG.e(LOG_TAG, "Error closing InAppBrowser from toolbar back: " + ex.getMessage());
                             }
                         }
                     });
