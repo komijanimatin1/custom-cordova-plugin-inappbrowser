@@ -1339,9 +1339,8 @@ BOOL isExiting = FALSE;
 
 - (void)goBack:(id)sender
 {
-    // Emit toolbarback message for parity
-    [[CDVWKInAppBrowser getInstance] sendEvent:@"message" withData:@{ @"type": @"toolbarback" }];
-    [self.webView goBack];
+    // Close the InAppBrowser directly when toolbar back is pressed
+    [self close];
 }
 
 - (void)goForward:(id)sender
@@ -1574,15 +1573,8 @@ BOOL isExiting = FALSE;
 }
 
 - (void)closeOrGoBack {
-    // Emit toolbarback message to host for parity with Android
-    [[CDVWKInAppBrowser getInstance] sendEvent:@"message" withData:@{ @"type": @"toolbarback" }];
-    
-    // Check if we can go back
-    if (self.webView.canGoBack) {
-        [self.webView goBack];
-    } else {
-        [self close];
-    }
+    // Close the InAppBrowser directly when toolbar back is pressed
+    [self close];
 }
 
 - (void)viewWillAppear:(BOOL)animated
