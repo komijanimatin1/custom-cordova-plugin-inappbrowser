@@ -49,6 +49,8 @@ import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.HttpAuthHandler;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebStorage;
+import android.webkit.WebViewDatabase;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -105,6 +107,7 @@ public class InAppBrowser extends CordovaPlugin {
     private static final String DOWNLOAD_EVENT = "download";
     private static final String MESSAGE_EVENT = "message";
     private static final String CLEAR_ALL_CACHE = "clearcache";
+    private static final String CLEAR_DATA = "cleardata";
     private static final String CLEAR_SESSION_CACHE = "clearsessioncache";
     private static final String HARDWARE_BACK_BUTTON = "hardwareback";
     private static final String GESTURES = "gestures";
@@ -158,6 +161,7 @@ public class InAppBrowser extends CordovaPlugin {
     private boolean showZoomControls = true;
     private boolean openWindowHidden = false;
     private boolean clearAllCache = false;
+    private boolean clearAllData = false;
     private boolean clearSessionCache = false;
     private boolean hadwareBackButton = true;
     private boolean gesturesEnabled = true; // Default: gestures enabled
@@ -1253,6 +1257,11 @@ public class InAppBrowser extends CordovaPlugin {
                     clearSessionCache = cache.equals("yes") ? true : false;
                 }
             }
+            // New: cleardata - clear cookies, local storage, indexedDB, WebSQL, form data
+            String clearData = features.get(CLEAR_DATA);
+            if (clearData != null) {
+                clearAllData = clearData.equals("yes") ? true : false;
+            }
             String shouldPause = features.get(SHOULD_PAUSE);
             if (shouldPause != null) {
                 shouldPauseInAppBrowser = shouldPause.equals("yes") ? true : false;
@@ -2013,7 +2022,30 @@ public class InAppBrowser extends CordovaPlugin {
                 }
                 settings.setDomStorageEnabled(true);
 
-                if (clearAllCache) {
+                if (clearAllData) {
+                    // Clear cookies (all), local storage, WebSQL, IndexedDB where possible, and form data
+                    CookieManager cookieManager = CookieManager.getInstance();
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                        cookieManager.removeAllCookies(null);
+                        cookieManager.flush();
+                    } else {
+                        cookieManager.removeAllCookie();
+                    }
+
+                    try {
+                        // Delete WebStorage data (localStorage, WebSQL)
+                        WebStorage.getInstance().deleteAllData();
+                    } catch (Exception e) {
+                        LOG.d(LOG_TAG, "WebStorage deletion failed: " + e.getMessage());
+                    }
+
+                    try {
+                        // Clear saved form data / HTTP auth etc.
+                        WebViewDatabase.getInstance(cordova.getActivity()).clearFormData();
+                    } catch (Exception e) {
+                        LOG.d(LOG_TAG, "WebViewDatabase clearFormData failed: " + e.getMessage());
+                    }
+                } else if (clearAllCache) {
                     CookieManager.getInstance().removeAllCookie();
                 } else if (clearSessionCache) {
                     CookieManager.getInstance().removeSessionCookie();
